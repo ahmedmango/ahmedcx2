@@ -6,12 +6,14 @@ interface EpigramBlockProps {
 const EpigramBlock = ({ text, index }: EpigramBlockProps) => {
   return (
     <article 
-      className="min-h-screen flex items-center justify-center px-6 py-24"
+      className="h-screen flex items-center justify-center px-6 md:px-12 snap-start snap-always"
       data-index={index}
     >
-      <p className="max-w-2xl text-xl md:text-2xl leading-relaxed text-foreground">
-        {text}
-      </p>
+      <div className="max-w-2xl w-full">
+        <p className="text-xl md:text-2xl lg:text-3xl leading-relaxed md:leading-relaxed lg:leading-loose text-foreground">
+          {text}
+        </p>
+      </div>
     </article>
   );
 };

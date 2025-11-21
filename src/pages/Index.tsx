@@ -23,16 +23,19 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
+    const container = document.querySelector('.snap-y');
+    if (!container) return;
+
     const handleScroll = () => {
-      const viewportCenter = window.scrollY + window.innerHeight / 2;
-      const articles = document.querySelectorAll('article[data-index]');
+      const viewportCenter = container.scrollTop + window.innerHeight / 2;
+      const articles = container.querySelectorAll('article[data-index]');
       
       let currentIndex = 0;
       let closestDistance = Infinity;
       
       articles.forEach((article) => {
         const rect = article.getBoundingClientRect();
-        const articleCenter = window.scrollY + rect.top + rect.height / 2;
+        const articleCenter = container.scrollTop + rect.top + rect.height / 2;
         const distance = Math.abs(viewportCenter - articleCenter);
         
         if (distance < closestDistance) {
@@ -44,10 +47,10 @@ const Index = () => {
       setCurrentThread(`#${String(currentIndex).padStart(4, '0')}`);
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    container.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll(); // Initial check
     
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
   }, [epigrams]);
 
   const loadEpigrams = async () => {
@@ -75,7 +78,7 @@ const Index = () => {
   }
 
   return (
-    <div className="relative">
+    <div className="relative snap-y snap-mandatory overflow-y-scroll h-screen">
       <Header currentThread={currentThread} />
       
       {/* Admin button - subtle and fixed */}
@@ -89,7 +92,7 @@ const Index = () => {
       </Button>
 
       {epigrams.length === 0 ? (
-        <div className="min-h-screen flex items-center justify-center px-6">
+        <div className="h-screen flex items-center justify-center px-6 snap-start">
           <div className="text-center space-y-4">
             <p className="text-xl text-muted-foreground">No epigrams yet.</p>
             <Button onClick={() => navigate("/admin")}>
