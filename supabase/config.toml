@@ -1,1 +1,4 @@
 project_id = "jpnnqoubfdtbbxtnbuyx"
+
+[functions.epigrams]
+verify_jwt = false
