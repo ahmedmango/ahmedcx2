@@ -24,19 +24,24 @@ const Index = () => {
 
   useEffect(() => {
     const handleScroll = () => {
-      const scrollPosition = window.scrollY + window.innerHeight / 2;
+      const viewportCenter = window.scrollY + window.innerHeight / 2;
       const articles = document.querySelectorAll('article[data-index]');
+      
+      let currentIndex = 0;
+      let closestDistance = Infinity;
       
       articles.forEach((article) => {
         const rect = article.getBoundingClientRect();
-        const articleTop = window.scrollY + rect.top;
-        const articleBottom = articleTop + rect.height;
+        const articleCenter = window.scrollY + rect.top + rect.height / 2;
+        const distance = Math.abs(viewportCenter - articleCenter);
         
-        if (scrollPosition >= articleTop && scrollPosition < articleBottom) {
-          const index = parseInt(article.getAttribute('data-index') || '0');
-          setCurrentThread(`#${String(index).padStart(4, '0')}`);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          currentIndex = parseInt(article.getAttribute('data-index') || '0');
         }
       });
+      
+      setCurrentThread(`#${String(currentIndex).padStart(4, '0')}`);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
