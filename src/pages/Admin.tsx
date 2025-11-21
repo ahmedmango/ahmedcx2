@@ -219,72 +219,93 @@ const Admin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background py-12 px-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <div className="space-x-2">
-            <Button variant="outline" onClick={() => navigate("/")}>
+    <div className="min-h-screen bg-background py-8 px-4 md:px-6">
+      <div className="max-w-5xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-6 border-b">
+          <div>
+            <h1 className="text-3xl font-bold mb-1">Admin Dashboard</h1>
+            <p className="text-sm text-muted-foreground">{epigrams.length} epigrams</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate("/")} size="sm">
               View Public Site
             </Button>
-            <Button variant="destructive" onClick={handleLogout}>
+            <Button variant="destructive" onClick={handleLogout} size="sm">
               Logout
             </Button>
           </div>
         </div>
 
         {/* Create New Epigram */}
-        <Card className="p-6 mb-8">
-          <h2 className="text-xl font-bold mb-4">Create New Epigram</h2>
+        <Card className="p-6 mb-8 border-accent/20">
+          <h2 className="text-xl font-semibold mb-4">Create New Epigram</h2>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">Thread ID</label>
+              <label className="text-sm font-medium mb-2 block text-muted-foreground">
+                Thread ID
+              </label>
               <Input
                 placeholder="default"
                 value={newThreadId}
                 onChange={(e) => setNewThreadId(e.target.value)}
+                className="max-w-xs"
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-2 block">Text</label>
+              <label className="text-sm font-medium mb-2 block text-muted-foreground">
+                Text <span className="text-xs">(Press Enter for line breaks)</span>
+              </label>
               <Textarea
-                placeholder="Write your epigram..."
+                placeholder="Write your epigram... Press Enter to add line breaks."
                 value={newText}
                 onChange={(e) => setNewText(e.target.value)}
-                rows={6}
+                rows={8}
+                className="font-serif text-lg resize-none"
               />
             </div>
-            <Button onClick={handleSaveNew} disabled={loading}>
-              {loading ? "Saving..." : "Create Epigram"}
+            <Button onClick={handleSaveNew} disabled={loading} className="w-full md:w-auto">
+              {loading ? "Creating..." : "Create Epigram"}
             </Button>
           </div>
         </Card>
 
         {/* Existing Epigrams */}
         <div className="space-y-4">
-          <h2 className="text-xl font-bold">Existing Epigrams ({epigrams.length})</h2>
+          <h2 className="text-xl font-semibold mb-4">All Epigrams</h2>
           {epigrams.map((epigram) => (
-            <Card key={epigram.id} className="p-6">
+            <Card key={epigram.id} className="overflow-hidden">
               {editingId === epigram.id ? (
-                <div className="space-y-4">
+                <div className="p-6 space-y-4 bg-muted/20">
+                  <div className="flex justify-between items-center">
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Editing #{String(epigram.id).padStart(4, '0')}
+                    </label>
+                  </div>
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Thread ID</label>
+                    <label className="text-sm font-medium mb-2 block text-muted-foreground">
+                      Thread ID
+                    </label>
                     <Input
                       value={editThreadId}
                       onChange={(e) => setEditThreadId(e.target.value)}
+                      className="max-w-xs"
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Text</label>
+                    <label className="text-sm font-medium mb-2 block text-muted-foreground">
+                      Text
+                    </label>
                     <Textarea
                       value={editText}
                       onChange={(e) => setEditText(e.target.value)}
-                      rows={6}
+                      rows={10}
+                      className="font-serif text-lg resize-none"
                     />
                   </div>
                   <div className="flex gap-2">
                     <Button onClick={handleSaveEdit} disabled={loading}>
-                      Save
+                      {loading ? "Saving..." : "Save Changes"}
                     </Button>
                     <Button
                       variant="outline"
@@ -300,10 +321,12 @@ const Admin = () => {
                   </div>
                 </div>
               ) : (
-                <div>
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="text-sm text-muted-foreground">
-                      Thread: {epigram.thread_id} • ID: {epigram.id}
+                <div className="p-6">
+                  <div className="flex justify-between items-start gap-4 mb-4">
+                    <div className="flex-1">
+                      <div className="text-xs text-muted-foreground mb-1">
+                        #{String(epigram.id).padStart(4, '0')} • Thread: {epigram.thread_id}
+                      </div>
                     </div>
                     <div className="flex gap-2">
                       <Button
@@ -323,7 +346,9 @@ const Admin = () => {
                       </Button>
                     </div>
                   </div>
-                  <p className="text-lg leading-relaxed whitespace-pre-wrap">{epigram.text}</p>
+                  <p className="text-lg leading-relaxed font-serif whitespace-pre-wrap">
+                    {epigram.text}
+                  </p>
                 </div>
               )}
             </Card>
