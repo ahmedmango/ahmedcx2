@@ -10,7 +10,10 @@ const EpigramBlock = ({ text, index }: EpigramBlockProps) => {
       data-index={index}
     >
       <div className="max-w-2xl mx-auto">
-        <p className="text-xl md:text-2xl lg:text-3xl leading-relaxed md:leading-relaxed lg:leading-loose text-foreground whitespace-pre-wrap">
+        <p 
+          className="text-xl md:text-2xl lg:text-3xl leading-relaxed md:leading-relaxed lg:leading-loose whitespace-pre-wrap"
+          style={{ color: 'var(--body-text)' }}
+        >
           {text}
         </p>
       </div>

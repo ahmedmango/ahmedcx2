@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useSettings } from "@/hooks/useSettings";
 
 interface Epigram {
   id?: number;
@@ -25,6 +26,7 @@ const Admin = () => {
   const [newText, setNewText] = useState("");
   const [newThreadId, setNewThreadId] = useState("default");
   const [loading, setLoading] = useState(false);
+  const { settings, updateSetting, loadSettings } = useSettings();
 
   useEffect(() => {
     const storedKey = sessionStorage.getItem("ahmed_write_key");
@@ -236,6 +238,97 @@ const Admin = () => {
             </Button>
           </div>
         </div>
+
+        {/* Color Customization */}
+        <Card className="p-6 mb-8 border-accent/20">
+          <h2 className="text-xl font-semibold mb-4">Color Customization</h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            Customize colors across your site. Use HSL format (e.g., "5 100% 66%")
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="text-sm font-medium mb-2 block text-muted-foreground">
+                Header Text Color ("AHMED")
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  value={settings.header_text_color}
+                  onChange={(e) => updateSetting('header_text_color', e.target.value)}
+                  placeholder="0 0% 45%"
+                  className="font-mono text-sm"
+                />
+                <div 
+                  className="w-12 h-10 rounded border"
+                  style={{ backgroundColor: `hsl(${settings.header_text_color})` }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block text-muted-foreground">
+                Thread Number Color
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  value={settings.thread_number_color}
+                  onChange={(e) => updateSetting('thread_number_color', e.target.value)}
+                  placeholder="5 100% 66%"
+                  className="font-mono text-sm"
+                />
+                <div 
+                  className="w-12 h-10 rounded border"
+                  style={{ backgroundColor: `hsl(${settings.thread_number_color})` }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block text-muted-foreground">
+                Progress Bar Color
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  value={settings.progress_bar_color}
+                  onChange={(e) => updateSetting('progress_bar_color', e.target.value)}
+                  placeholder="5 100% 66%"
+                  className="font-mono text-sm"
+                />
+                <div 
+                  className="w-12 h-10 rounded border"
+                  style={{ backgroundColor: `hsl(${settings.progress_bar_color})` }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block text-muted-foreground">
+                Body Text Color
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  value={settings.body_text_color}
+                  onChange={(e) => updateSetting('body_text_color', e.target.value)}
+                  placeholder="0 0% 15%"
+                  className="font-mono text-sm"
+                />
+                <div 
+                  className="w-12 h-10 rounded border"
+                  style={{ backgroundColor: `hsl(${settings.body_text_color})` }}
+                />
+              </div>
+            </div>
+          </div>
+          <Button 
+            onClick={() => {
+              loadSettings();
+              toast.success("Colors updated");
+            }} 
+            className="mt-6"
+            variant="outline"
+          >
+            Refresh Preview
+          </Button>
+        </Card>
 
         {/* Create New Epigram */}
         <Card className="p-6 mb-8 border-accent/20">

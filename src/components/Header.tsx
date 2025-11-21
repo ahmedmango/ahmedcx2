@@ -11,21 +11,40 @@ const Header = ({ currentThread = "#0000" }: HeaderProps) => {
     const container = document.querySelector('.snap-y');
     if (!container) return;
 
+    let rafId: number;
+    let lastProgress = 0;
+
     const handleScroll = () => {
-      const windowHeight = window.innerHeight;
-      const documentHeight = container.scrollHeight;
-      const scrollTop = container.scrollTop;
-      
-      const scrollableHeight = documentHeight - windowHeight;
-      const progress = scrollableHeight > 0 ? (scrollTop / scrollableHeight) * 100 : 0;
-      
-      setScrollProgress(Math.min(progress, 100));
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+
+      rafId = requestAnimationFrame(() => {
+        const windowHeight = window.innerHeight;
+        const documentHeight = container.scrollHeight;
+        const scrollTop = container.scrollTop;
+        
+        const scrollableHeight = documentHeight - windowHeight;
+        const progress = scrollableHeight > 0 ? (scrollTop / scrollableHeight) * 100 : 0;
+        const newProgress = Math.min(progress, 100);
+        
+        // Only update if changed significantly (reduces repaints)
+        if (Math.abs(newProgress - lastProgress) > 0.1) {
+          setScrollProgress(newProgress);
+          lastProgress = newProgress;
+        }
+      });
     };
 
     container.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll(); // Initial calculation
     
-    return () => container.removeEventListener('scroll', handleScroll);
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+    };
   }, []);
 
   return (
@@ -33,10 +52,10 @@ const Header = ({ currentThread = "#0000" }: HeaderProps) => {
       <div className="px-6 py-8">
         <div className="max-w-3xl mx-auto flex justify-between items-start">
           <div className="space-y-1">
-            <h1 className="text-sm tracking-[0.2em] text-muted-foreground uppercase">
+            <h1 className="text-sm tracking-[0.2em] uppercase" style={{ color: 'var(--header-text)' }}>
               AHMED
             </h1>
-            <div className="text-lg font-normal text-accent tracking-tight">
+            <div className="text-lg font-normal tracking-tight" style={{ color: 'var(--thread-number)' }}>
               {currentThread}
             </div>
           </div>
@@ -46,8 +65,11 @@ const Header = ({ currentThread = "#0000" }: HeaderProps) => {
       {/* Progress bar */}
       <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-border">
         <div 
-          className="h-full bg-accent transition-all duration-150 ease-out"
-          style={{ width: `${scrollProgress}%` }}
+          className="h-full transition-all duration-150 ease-out"
+          style={{ 
+            width: `${scrollProgress}%`,
+            backgroundColor: 'var(--progress-bar)'
+          }}
         />
       </div>
     </header>
