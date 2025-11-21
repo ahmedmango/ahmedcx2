@@ -86,16 +86,6 @@ const Index = () => {
       } as React.CSSProperties}
     >
       <Header currentThread={currentThread} />
-      
-      {/* Admin button - subtle and fixed */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => navigate("/admin")}
-        className="fixed bottom-6 right-6 z-40 opacity-30 hover:opacity-100 transition-opacity"
-      >
-        Admin
-      </Button>
 
       {epigrams.length === 0 ? (
         <div className="h-screen flex items-center justify-center px-6 snap-start">
