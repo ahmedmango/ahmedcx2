@@ -77,12 +77,14 @@ const Index = () => {
 
   return (
     <div 
-      className="relative snap-y snap-mandatory overflow-y-scroll h-screen"
+      className="relative snap-y snap-mandatory overflow-y-scroll h-screen scroll-smooth"
       style={{
         '--header-text': `hsl(${settings.header_text_color})`,
         '--thread-number': `hsl(${settings.thread_number_color})`,
         '--progress-bar': `hsl(${settings.progress_bar_color})`,
         '--body-text': `hsl(${settings.body_text_color})`,
+        WebkitOverflowScrolling: 'touch',
+        scrollBehavior: 'smooth',
       } as React.CSSProperties}
     >
       <Header currentThread={currentThread} />

@@ -6,8 +6,12 @@ interface EpigramBlockProps {
 const EpigramBlock = ({ text, index }: EpigramBlockProps) => {
   return (
     <article 
-      className="py-32 md:py-40 px-6 md:px-12 snap-start"
+      className="py-32 md:py-40 px-6 md:px-12 snap-start snap-always"
       data-index={index}
+      style={{
+        scrollSnapAlign: 'start',
+        scrollSnapStop: 'always',
+      }}
     >
       <div className="max-w-2xl mx-auto">
         <p 
