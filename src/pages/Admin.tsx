@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSettings } from "@/hooks/useSettings";
+import { hexToHSL, hslToHex } from "@/lib/colorUtils";
 
 interface Epigram {
   id?: number;
@@ -243,91 +244,110 @@ const Admin = () => {
         <Card className="p-6 mb-8 border-accent/20">
           <h2 className="text-xl font-semibold mb-4">Color Customization</h2>
           <p className="text-sm text-muted-foreground mb-6">
-            Customize colors across your site. Use HSL format (e.g., "5 100% 66%")
+            Pick colors visually or enter HSL values manually
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="text-sm font-medium mb-2 block text-muted-foreground">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-3">
+              <label className="text-sm font-medium block">
                 Header Text Color ("AHMED")
               </label>
-              <div className="flex gap-2">
+              <div className="flex gap-3 items-center">
+                <input
+                  type="color"
+                  value={hslToHex(settings.header_text_color)}
+                  onChange={(e) => updateSetting('header_text_color', hexToHSL(e.target.value))}
+                  className="w-20 h-12 rounded border-2 border-border cursor-pointer"
+                />
                 <Input
                   value={settings.header_text_color}
                   onChange={(e) => updateSetting('header_text_color', e.target.value)}
                   placeholder="0 0% 45%"
-                  className="font-mono text-sm"
-                />
-                <div 
-                  className="w-12 h-10 rounded border"
-                  style={{ backgroundColor: `hsl(${settings.header_text_color})` }}
+                  className="font-mono text-sm flex-1"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="text-sm font-medium mb-2 block text-muted-foreground">
+            <div className="space-y-3">
+              <label className="text-sm font-medium block">
                 Thread Number Color
               </label>
-              <div className="flex gap-2">
+              <div className="flex gap-3 items-center">
+                <input
+                  type="color"
+                  value={hslToHex(settings.thread_number_color)}
+                  onChange={(e) => updateSetting('thread_number_color', hexToHSL(e.target.value))}
+                  className="w-20 h-12 rounded border-2 border-border cursor-pointer"
+                />
                 <Input
                   value={settings.thread_number_color}
                   onChange={(e) => updateSetting('thread_number_color', e.target.value)}
                   placeholder="5 100% 66%"
-                  className="font-mono text-sm"
-                />
-                <div 
-                  className="w-12 h-10 rounded border"
-                  style={{ backgroundColor: `hsl(${settings.thread_number_color})` }}
+                  className="font-mono text-sm flex-1"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="text-sm font-medium mb-2 block text-muted-foreground">
+            <div className="space-y-3">
+              <label className="text-sm font-medium block">
                 Progress Bar Color
               </label>
-              <div className="flex gap-2">
+              <div className="flex gap-3 items-center">
+                <input
+                  type="color"
+                  value={hslToHex(settings.progress_bar_color)}
+                  onChange={(e) => updateSetting('progress_bar_color', hexToHSL(e.target.value))}
+                  className="w-20 h-12 rounded border-2 border-border cursor-pointer"
+                />
                 <Input
                   value={settings.progress_bar_color}
                   onChange={(e) => updateSetting('progress_bar_color', e.target.value)}
                   placeholder="5 100% 66%"
-                  className="font-mono text-sm"
-                />
-                <div 
-                  className="w-12 h-10 rounded border"
-                  style={{ backgroundColor: `hsl(${settings.progress_bar_color})` }}
+                  className="font-mono text-sm flex-1"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="text-sm font-medium mb-2 block text-muted-foreground">
+            <div className="space-y-3">
+              <label className="text-sm font-medium block">
                 Body Text Color
               </label>
-              <div className="flex gap-2">
+              <div className="flex gap-3 items-center">
+                <input
+                  type="color"
+                  value={hslToHex(settings.body_text_color)}
+                  onChange={(e) => updateSetting('body_text_color', hexToHSL(e.target.value))}
+                  className="w-20 h-12 rounded border-2 border-border cursor-pointer"
+                />
                 <Input
                   value={settings.body_text_color}
                   onChange={(e) => updateSetting('body_text_color', e.target.value)}
                   placeholder="0 0% 15%"
-                  className="font-mono text-sm"
-                />
-                <div 
-                  className="w-12 h-10 rounded border"
-                  style={{ backgroundColor: `hsl(${settings.body_text_color})` }}
+                  className="font-mono text-sm flex-1"
                 />
               </div>
             </div>
           </div>
-          <Button 
-            onClick={() => {
-              loadSettings();
-              toast.success("Colors updated");
-            }} 
-            className="mt-6"
-            variant="outline"
-          >
-            Refresh Preview
-          </Button>
+          <div className="mt-6 p-4 bg-muted/30 rounded-lg">
+            <p className="text-xs text-muted-foreground mb-2">Preview:</p>
+            <div className="flex gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded border-2" style={{ backgroundColor: `hsl(${settings.header_text_color})` }} />
+                <span className="text-xs">Header</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded border-2" style={{ backgroundColor: `hsl(${settings.thread_number_color})` }} />
+                <span className="text-xs">Thread #</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded border-2" style={{ backgroundColor: `hsl(${settings.progress_bar_color})` }} />
+                <span className="text-xs">Progress</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded border-2" style={{ backgroundColor: `hsl(${settings.body_text_color})` }} />
+                <span className="text-xs">Body Text</span>
+              </div>
+            </div>
+          </div>
         </Card>
 
         {/* Create New Epigram */}
