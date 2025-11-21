@@ -27,19 +27,15 @@ const Index = () => {
     if (!container) return;
 
     const handleScroll = () => {
-      const viewportCenter = container.scrollTop + window.innerHeight / 2;
+      const scrollTop = container.scrollTop;
       const articles = container.querySelectorAll('article[data-index]');
       
       let currentIndex = 0;
-      let closestDistance = Infinity;
       
       articles.forEach((article) => {
         const rect = article.getBoundingClientRect();
-        const articleCenter = container.scrollTop + rect.top + rect.height / 2;
-        const distance = Math.abs(viewportCenter - articleCenter);
-        
-        if (distance < closestDistance) {
-          closestDistance = distance;
+        // If article is in viewport (considering some threshold)
+        if (rect.top < window.innerHeight / 2 && rect.bottom > window.innerHeight / 2) {
           currentIndex = parseInt(article.getAttribute('data-index') || '0');
         }
       });
