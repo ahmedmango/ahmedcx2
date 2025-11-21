@@ -8,10 +8,13 @@ const Header = ({ currentThread = "#0000" }: HeaderProps) => {
   const [scrollProgress, setScrollProgress] = useState(0);
 
   useEffect(() => {
+    const container = document.querySelector('.snap-y');
+    if (!container) return;
+
     const handleScroll = () => {
       const windowHeight = window.innerHeight;
-      const documentHeight = document.documentElement.scrollHeight;
-      const scrollTop = window.scrollY;
+      const documentHeight = container.scrollHeight;
+      const scrollTop = container.scrollTop;
       
       const scrollableHeight = documentHeight - windowHeight;
       const progress = scrollableHeight > 0 ? (scrollTop / scrollableHeight) * 100 : 0;
@@ -19,10 +22,10 @@ const Header = ({ currentThread = "#0000" }: HeaderProps) => {
       setScrollProgress(Math.min(progress, 100));
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    container.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll(); // Initial calculation
     
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
