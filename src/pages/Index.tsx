@@ -4,6 +4,7 @@ import EpigramBlock from "@/components/EpigramBlock";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useSettings } from "@/hooks/useSettings";
 
 interface Epigram {
   id: number;
@@ -17,6 +18,7 @@ const Index = () => {
   const [epigrams, setEpigrams] = useState<Epigram[]>([]);
   const [currentThread, setCurrentThread] = useState("#0000");
   const [loading, setLoading] = useState(true);
+  const { settings, loading: settingsLoading } = useSettings();
 
   useEffect(() => {
     loadEpigrams();
@@ -74,7 +76,15 @@ const Index = () => {
   }
 
   return (
-    <div className="relative snap-y snap-mandatory overflow-y-scroll h-screen">
+    <div 
+      className="relative snap-y snap-mandatory overflow-y-scroll h-screen"
+      style={{
+        '--header-text': `hsl(${settings.header_text_color})`,
+        '--thread-number': `hsl(${settings.thread_number_color})`,
+        '--progress-bar': `hsl(${settings.progress_bar_color})`,
+        '--body-text': `hsl(${settings.body_text_color})`,
+      } as React.CSSProperties}
+    >
       <Header currentThread={currentThread} />
       
       {/* Admin button - subtle and fixed */}
