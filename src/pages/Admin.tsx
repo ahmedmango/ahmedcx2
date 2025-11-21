@@ -1,0 +1,337 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card } from "@/components/ui/card";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Epigram {
+  id?: number;
+  text: string;
+  thread_id: string;
+  created_at?: string;
+}
+
+const Admin = () => {
+  const navigate = useNavigate();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [writeKey, setWriteKey] = useState("");
+  const [epigrams, setEpigrams] = useState<Epigram[]>([]);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editText, setEditText] = useState("");
+  const [editThreadId, setEditThreadId] = useState("default");
+  const [newText, setNewText] = useState("");
+  const [newThreadId, setNewThreadId] = useState("default");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const storedKey = sessionStorage.getItem("ahmed_write_key");
+    if (storedKey) {
+      setWriteKey(storedKey);
+      setIsAuthenticated(true);
+      loadEpigrams();
+    }
+  }, []);
+
+  const handleLogin = () => {
+    if (writeKey.trim()) {
+      sessionStorage.setItem("ahmed_write_key", writeKey);
+      setIsAuthenticated(true);
+      loadEpigrams();
+      toast.success("Authenticated successfully");
+    } else {
+      toast.error("Please enter a write key");
+    }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("ahmed_write_key");
+    setIsAuthenticated(false);
+    setWriteKey("");
+    navigate("/");
+  };
+
+  const loadEpigrams = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('epigrams')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      setEpigrams(data || []);
+    } catch (error) {
+      console.error('Error loading epigrams:', error);
+      toast.error("Failed to load epigrams");
+    }
+  };
+
+  const handleSaveNew = async () => {
+    if (!newText.trim()) {
+      toast.error("Text cannot be empty");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/epigrams`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            write_key: writeKey,
+            epigram: {
+              text: newText,
+              thread_id: newThreadId
+            }
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save');
+      }
+
+      toast.success("Epigram created successfully");
+      setNewText("");
+      setNewThreadId("default");
+      await loadEpigrams();
+    } catch (error) {
+      console.error('Error creating epigram:', error);
+      toast.error(error instanceof Error ? error.message : "Failed to create epigram");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = (epigram: Epigram) => {
+    setEditingId(epigram.id || null);
+    setEditText(epigram.text);
+    setEditThreadId(epigram.thread_id);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editText.trim() || editingId === null) {
+      toast.error("Text cannot be empty");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/epigrams`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            write_key: writeKey,
+            epigram: {
+              id: editingId,
+              text: editText,
+              thread_id: editThreadId
+            }
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save');
+      }
+
+      toast.success("Epigram updated successfully");
+      setEditingId(null);
+      setEditText("");
+      setEditThreadId("default");
+      await loadEpigrams();
+    } catch (error) {
+      console.error('Error updating epigram:', error);
+      toast.error(error instanceof Error ? error.message : "Failed to update epigram");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this epigram?")) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/epigrams?id=${id}&write_key=${writeKey}`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete');
+      }
+
+      toast.success("Epigram deleted successfully");
+      await loadEpigrams();
+    } catch (error) {
+      console.error('Error deleting epigram:', error);
+      toast.error(error instanceof Error ? error.message : "Failed to delete epigram");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <Card className="w-full max-w-md p-8">
+          <h1 className="text-2xl font-bold mb-6 text-center">Admin Login</h1>
+          <div className="space-y-4">
+            <Input
+              type="password"
+              placeholder="Enter write key"
+              value={writeKey}
+              onChange={(e) => setWriteKey(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+            />
+            <Button onClick={handleLogin} className="w-full">
+              Login
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/")}
+              className="w-full"
+            >
+              Back to Home
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background py-12 px-6">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+          <div className="space-x-2">
+            <Button variant="outline" onClick={() => navigate("/")}>
+              View Public Site
+            </Button>
+            <Button variant="destructive" onClick={handleLogout}>
+              Logout
+            </Button>
+          </div>
+        </div>
+
+        {/* Create New Epigram */}
+        <Card className="p-6 mb-8">
+          <h2 className="text-xl font-bold mb-4">Create New Epigram</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Thread ID</label>
+              <Input
+                placeholder="default"
+                value={newThreadId}
+                onChange={(e) => setNewThreadId(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Text</label>
+              <Textarea
+                placeholder="Write your epigram..."
+                value={newText}
+                onChange={(e) => setNewText(e.target.value)}
+                rows={6}
+              />
+            </div>
+            <Button onClick={handleSaveNew} disabled={loading}>
+              {loading ? "Saving..." : "Create Epigram"}
+            </Button>
+          </div>
+        </Card>
+
+        {/* Existing Epigrams */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold">Existing Epigrams ({epigrams.length})</h2>
+          {epigrams.map((epigram) => (
+            <Card key={epigram.id} className="p-6">
+              {editingId === epigram.id ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Thread ID</label>
+                    <Input
+                      value={editThreadId}
+                      onChange={(e) => setEditThreadId(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Text</label>
+                    <Textarea
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      rows={6}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={handleSaveEdit} disabled={loading}>
+                      Save
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setEditingId(null);
+                        setEditText("");
+                        setEditThreadId("default");
+                      }}
+                      disabled={loading}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="text-sm text-muted-foreground">
+                      Thread: {epigram.thread_id} • ID: {epigram.id}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(epigram)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => epigram.id && handleDelete(epigram.id)}
+                        disabled={loading}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-lg leading-relaxed whitespace-pre-wrap">{epigram.text}</p>
+                </div>
+              )}
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Admin;
