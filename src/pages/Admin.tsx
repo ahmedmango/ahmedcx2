@@ -547,10 +547,11 @@ const Admin = () => {
           <h2 className="text-xl font-semibold mb-4">All Epigrams (Drag to Reorder)</h2>
           <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={epigrams.map(e => e.id || 0)} strategy={verticalListSortingStrategy}>
-              {epigrams.map((epigram) => (
+              {epigrams.map((epigram, index) => (
                 <SortableEpigramCard
                   key={epigram.id}
                   epigram={epigram}
+                  displayNumber={index + 1}
                   editingId={editingId}
                   editText={editText}
                   editThreadId={editThreadId}
