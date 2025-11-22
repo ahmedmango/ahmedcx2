@@ -25,30 +25,28 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    const container = document.querySelector('.snap-y');
-    if (!container) return;
-
     const handleScroll = () => {
-      const scrollTop = container.scrollTop;
-      const articles = container.querySelectorAll('article[data-index]');
-      
-      let currentIndex = 0;
-      
-      articles.forEach((article) => {
-        const rect = article.getBoundingClientRect();
-        // If article is in viewport (considering some threshold)
-        if (rect.top < window.innerHeight / 2 && rect.bottom > window.innerHeight / 2) {
-          currentIndex = parseInt(article.getAttribute('data-index') || '0');
-        }
+      requestAnimationFrame(() => {
+        const articles = document.querySelectorAll('article[data-index]');
+        
+        let currentIndex = 0;
+        
+        articles.forEach((article) => {
+          const rect = article.getBoundingClientRect();
+          // If article is in viewport (considering some threshold)
+          if (rect.top < window.innerHeight / 2 && rect.bottom > window.innerHeight / 2) {
+            currentIndex = parseInt(article.getAttribute('data-index') || '0');
+          }
+        });
+        
+        setCurrentThread(`#${String(currentIndex).padStart(4, '0')}`);
       });
-      
-      setCurrentThread(`#${String(currentIndex).padStart(4, '0')}`);
     };
 
-    container.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll(); // Initial check
     
-    return () => container.removeEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, [epigrams]);
 
   const loadEpigrams = async () => {

@@ -8,35 +8,22 @@ const Header = ({ currentThread = "#0000" }: HeaderProps) => {
   const [scrollProgress, setScrollProgress] = useState(0);
 
   useEffect(() => {
-    let rafId: number;
-
-    const handleScroll = () => {
-      if (rafId) {
-        cancelAnimationFrame(rafId);
-      }
-
-      rafId = requestAnimationFrame(() => {
+    const updateScrollProgress = () => {
+      requestAnimationFrame(() => {
         const doc = document.documentElement;
-        const body = document.body;
-
-        const scrollTop = doc.scrollTop || body.scrollTop || 0;
-        const scrollHeight = (doc.scrollHeight || body.scrollHeight || 0) - (doc.clientHeight || window.innerHeight);
-
-        const progress = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
-        const clampedProgress = Math.min(Math.max(progress, 0), 100);
-
-        setScrollProgress(clampedProgress);
+        const scrollTop = doc.scrollTop;
+        const scrollHeight = doc.scrollHeight - doc.clientHeight;
+        const progress = (scrollTop / scrollHeight) * 100;
+        
+        setScrollProgress(progress);
       });
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll(); // Initial calculation
+    window.addEventListener('scroll', updateScrollProgress, { passive: true });
+    updateScrollProgress(); // Initial calculation
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
-      if (rafId) {
-        cancelAnimationFrame(rafId);
-      }
+      window.removeEventListener('scroll', updateScrollProgress);
     };
   }, []);
 
@@ -56,7 +43,7 @@ const Header = ({ currentThread = "#0000" }: HeaderProps) => {
       </div>
       
       {/* Progress bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-border">
+      <div className="absolute bottom-0 left-0 right-0 h-[3px] md:h-[1px] bg-transparent">
         <div 
           className="h-full"
           style={{ 
