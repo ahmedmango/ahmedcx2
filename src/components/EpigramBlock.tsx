@@ -8,7 +8,7 @@ const EpigramBlock = ({ text, index, title }: EpigramBlockProps) => {
   return (
     <article 
       className="py-16 md:py-20 px-6 md:px-12"
-      data-index={index}
+      data-id={index}
     >
       <div className="max-w-2xl mx-auto">
         {title && (
