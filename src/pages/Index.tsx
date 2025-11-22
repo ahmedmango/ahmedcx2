@@ -19,6 +19,7 @@ const Index = () => {
   const [epigrams, setEpigrams] = useState<Epigram[]>([]);
   const [currentThread, setCurrentThread] = useState("#0000");
   const [loading, setLoading] = useState(true);
+  const [visibleCount, setVisibleCount] = useState(1);
   const { settings, loading: settingsLoading } = useSettings();
 
   useEffect(() => {
@@ -55,6 +56,19 @@ const Index = () => {
         setCurrentThread((prev) => (prev === nextThread ? prev : nextThread));
       }
 
+      // Progressive reveal logic
+      const scrollPosition = window.scrollY + window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      const scrollPercentage = scrollPosition / documentHeight;
+      const newVisibleCount = Math.min(
+        epigrams.length,
+        Math.max(1, Math.ceil(scrollPercentage * epigrams.length * 1.5))
+      );
+      
+      if (newVisibleCount > visibleCount) {
+        setVisibleCount(newVisibleCount);
+      }
+
       ticking = false;
     };
 
@@ -71,7 +85,7 @@ const Index = () => {
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [epigrams]);
+  }, [epigrams, visibleCount]);
 
   const loadEpigrams = async () => {
     try {
@@ -119,12 +133,13 @@ const Index = () => {
           </div>
         </div>
       ) : (
-        epigrams.map((epigram) => (
+        epigrams.slice(0, visibleCount).map((epigram, idx) => (
           <EpigramBlock
             key={epigram.id}
             text={epigram.text}
             title={epigram.title}
             index={epigram.id}
+            isNew={idx === visibleCount - 1}
           />
         ))
       )}
