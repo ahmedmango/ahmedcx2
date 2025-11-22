@@ -36,11 +36,45 @@ const Admin = () => {
   const { settings, updateSetting, loadSettings } = useSettings();
 
   useEffect(() => {
-    const storedKey = sessionStorage.getItem("ahmed_write_key");
-    if (storedKey) {
-      setWriteKey(storedKey);
-      setIsAuthenticated(true);
-    }
+    const validateStoredKey = async () => {
+      const storedKey = sessionStorage.getItem("ahmed_write_key");
+      if (!storedKey) return;
+
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/epigrams`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              write_key: storedKey,
+              epigram: { text: '__test__', thread_id: 'test' }
+            })
+          }
+        );
+
+        if (!response.ok) {
+          console.error('Stored write key is invalid, clearing session');
+          sessionStorage.removeItem("ahmed_write_key");
+          setWriteKey("");
+          setIsAuthenticated(false);
+          toast.error("Session expired. Please log in again.");
+          return;
+        }
+
+        setWriteKey(storedKey);
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.error('Error validating stored write key:', error);
+        sessionStorage.removeItem("ahmed_write_key");
+        setWriteKey("");
+        setIsAuthenticated(false);
+      }
+    };
+
+    void validateStoredKey();
   }, []);
 
   useEffect(() => {
