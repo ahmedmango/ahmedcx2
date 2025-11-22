@@ -87,7 +87,7 @@ const Index = () => {
 
   return (
     <div 
-      className="relative min-h-screen"
+      className="relative min-h-screen pt-32"
       style={{
         '--header-text': `hsl(${settings.header_text_color})`,
         '--thread-number': `hsl(${settings.thread_number_color})`,
