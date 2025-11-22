@@ -16,6 +16,7 @@ interface Epigram {
 
 interface SortableEpigramCardProps {
   epigram: Epigram;
+  displayNumber: number;
   editingId: number | null;
   editText: string;
   editThreadId: string;
@@ -32,6 +33,7 @@ interface SortableEpigramCardProps {
 
 export const SortableEpigramCard = ({
   epigram,
+  displayNumber,
   editingId,
   editText,
   editThreadId,
@@ -70,7 +72,7 @@ export const SortableEpigramCard = ({
         <div className="p-6 space-y-4 bg-muted/20">
           <div className="flex justify-between items-center">
             <label className="text-sm font-medium text-muted-foreground">
-              Editing #{String(epigram.id).padStart(4, '0')}
+              Editing #{String(displayNumber).padStart(4, '0')}
             </label>
           </div>
           <div>
@@ -130,7 +132,7 @@ export const SortableEpigramCard = ({
                 <GripVertical className="h-5 w-5" />
               </button>
               <div className="text-xs text-muted-foreground">
-                #{String(epigram.id).padStart(4, '0')} • Thread: {epigram.thread_id}
+                #{String(displayNumber).padStart(4, '0')} • Thread: {epigram.thread_id}
               </div>
             </div>
             <div className="flex gap-2">
