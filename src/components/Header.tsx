@@ -12,7 +12,6 @@ const Header = ({ currentThread = "#0000" }: HeaderProps) => {
     if (!container) return;
 
     let rafId: number;
-    let lastProgress = 0;
 
     const handleScroll = () => {
       if (rafId) {
@@ -28,11 +27,7 @@ const Header = ({ currentThread = "#0000" }: HeaderProps) => {
         const progress = scrollableHeight > 0 ? (scrollTop / scrollableHeight) * 100 : 0;
         const newProgress = Math.min(progress, 100);
         
-        // Smoother updates with lower threshold
-        if (Math.abs(newProgress - lastProgress) > 0.05) {
-          setScrollProgress(newProgress);
-          lastProgress = newProgress;
-        }
+        setScrollProgress(newProgress);
       });
     };
 
@@ -65,10 +60,11 @@ const Header = ({ currentThread = "#0000" }: HeaderProps) => {
       {/* Progress bar */}
       <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-border">
         <div 
-          className="h-full transition-all duration-100 ease-linear"
+          className="h-full"
           style={{ 
             width: `${scrollProgress}%`,
-            backgroundColor: 'var(--progress-bar)'
+            backgroundColor: 'var(--progress-bar)',
+            transition: 'width 0.12s ease-out'
           }}
         />
       </div>
