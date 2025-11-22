@@ -37,18 +37,56 @@ const Admin = () => {
     if (storedKey) {
       setWriteKey(storedKey);
       setIsAuthenticated(true);
-      loadEpigrams();
     }
   }, []);
 
-  const handleLogin = () => {
-    if (writeKey.trim()) {
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadEpigrams();
+      loadSettings();
+    }
+  }, [isAuthenticated]);
+
+  const handleLogin = async () => {
+    if (!writeKey.trim()) {
+      toast.error("Please enter a write key");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Validate the write key by making a test request
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/epigrams`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            write_key: writeKey,
+            epigram: { text: '__test__', thread_id: 'test' }
+          })
+        }
+      );
+
+      if (response.status === 401) {
+        toast.error("Invalid write key");
+        setWriteKey("");
+        return;
+      }
+
+      // If we got here, the key is valid
       sessionStorage.setItem("ahmed_write_key", writeKey);
       setIsAuthenticated(true);
-      loadEpigrams();
+      await loadEpigrams();
       toast.success("Authenticated successfully");
-    } else {
-      toast.error("Please enter a write key");
+    } catch (error) {
+      console.error('Authentication error:', error);
+      toast.error("Authentication failed");
+      setWriteKey("");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -213,8 +251,8 @@ const Admin = () => {
               onChange={(e) => setWriteKey(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
             />
-            <Button onClick={handleLogin} className="w-full">
-              Login
+            <Button onClick={handleLogin} className="w-full" disabled={loading}>
+              {loading ? "Verifying..." : "Login"}
             </Button>
             <Button
               variant="ghost"
