@@ -77,14 +77,12 @@ const Index = () => {
 
   return (
     <div 
-      className="relative overflow-y-scroll h-screen scroll-smooth scroll-container"
+      className="relative min-h-screen"
       style={{
         '--header-text': `hsl(${settings.header_text_color})`,
         '--thread-number': `hsl(${settings.thread_number_color})`,
         '--progress-bar': `hsl(${settings.progress_bar_color})`,
         '--body-text': `hsl(${settings.body_text_color})`,
-        WebkitOverflowScrolling: 'touch',
-        scrollBehavior: 'smooth',
       } as React.CSSProperties}
     >
       <Header currentThread={currentThread} />

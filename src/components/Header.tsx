@@ -8,9 +8,6 @@ const Header = ({ currentThread = "#0000" }: HeaderProps) => {
   const [scrollProgress, setScrollProgress] = useState(0);
 
   useEffect(() => {
-    const container = document.querySelector('.scroll-container');
-    if (!container) return;
-
     let rafId: number;
 
     const handleScroll = () => {
@@ -19,23 +16,24 @@ const Header = ({ currentThread = "#0000" }: HeaderProps) => {
       }
 
       rafId = requestAnimationFrame(() => {
-        const windowHeight = window.innerHeight;
-        const documentHeight = container.scrollHeight;
-        const scrollTop = container.scrollTop;
-        
-        const scrollableHeight = documentHeight - windowHeight;
-        const progress = scrollableHeight > 0 ? (scrollTop / scrollableHeight) * 100 : 0;
-        const newProgress = Math.min(progress, 100);
-        
-        setScrollProgress(newProgress);
+        const doc = document.documentElement;
+        const body = document.body;
+
+        const scrollTop = doc.scrollTop || body.scrollTop || 0;
+        const scrollHeight = (doc.scrollHeight || body.scrollHeight || 0) - (doc.clientHeight || window.innerHeight);
+
+        const progress = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+        const clampedProgress = Math.min(Math.max(progress, 0), 100);
+
+        setScrollProgress(clampedProgress);
       });
     };
 
-    container.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll(); // Initial calculation
-    
+
     return () => {
-      container.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', handleScroll);
       if (rafId) {
         cancelAnimationFrame(rafId);
       }
