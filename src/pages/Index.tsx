@@ -77,7 +77,7 @@ const Index = () => {
 
   return (
     <div 
-      className="relative snap-y snap-mandatory overflow-y-scroll h-screen scroll-smooth"
+      className="relative overflow-y-scroll h-screen scroll-smooth"
       style={{
         '--header-text': `hsl(${settings.header_text_color})`,
         '--thread-number': `hsl(${settings.thread_number_color})`,
@@ -90,7 +90,7 @@ const Index = () => {
       <Header currentThread={currentThread} />
 
       {epigrams.length === 0 ? (
-        <div className="h-screen flex items-center justify-center px-6 snap-start">
+        <div className="h-screen flex items-center justify-center px-6">
           <div className="text-center space-y-4">
             <p className="text-xl text-muted-foreground">No epigrams yet.</p>
             <Button onClick={() => navigate("/admin")}>
