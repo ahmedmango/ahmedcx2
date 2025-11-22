@@ -88,12 +88,23 @@ serve(async (req) => {
           .single();
       } else {
         console.log('Creating new epigram');
+        
+        // Get the max display_order to assign the next one
+        const { data: maxData } = await supabase
+          .from('epigrams')
+          .select('display_order')
+          .order('display_order', { ascending: false })
+          .limit(1);
+        
+        const nextDisplayOrder = maxData && maxData.length > 0 ? maxData[0].display_order + 1 : 1;
+        
         result = await supabase
           .from('epigrams')
           .insert({
             text: epigram.text,
             thread_id: epigram.thread_id || 'default',
-            title: epigram.title || null
+            title: epigram.title || null,
+            display_order: nextDisplayOrder
           })
           .select()
           .single();
