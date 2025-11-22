@@ -78,7 +78,7 @@ const Index = () => {
       const { data, error } = await supabase
         .from('epigrams')
         .select('*')
-        .order('created_at', { ascending: true });
+        .order('display_order', { ascending: true });
 
       if (error) throw error;
       setEpigrams(data || []);
