@@ -17,6 +17,7 @@ export type Database = {
       epigrams: {
         Row: {
           created_at: string
+          display_order: number
           id: number
           text: string
           thread_id: string
@@ -24,6 +25,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          display_order: number
           id?: number
           text: string
           thread_id?: string
@@ -31,6 +33,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          display_order?: number
           id?: number
           text?: string
           thread_id?: string

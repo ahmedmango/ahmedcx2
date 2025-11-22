@@ -12,6 +12,7 @@ interface Epigram {
   thread_id: string;
   created_at: string;
   title?: string;
+  display_order: number;
 }
 
 const Index = () => {
@@ -92,7 +93,7 @@ const Index = () => {
       const { data, error } = await supabase
         .from('epigrams')
         .select('*')
-        .order('created_at', { ascending: true });
+        .order('display_order', { ascending: true });
 
       if (error) throw error;
       setEpigrams(data || []);
@@ -138,7 +139,7 @@ const Index = () => {
             key={epigram.id}
             text={epigram.text}
             title={epigram.title}
-            index={epigram.id}
+            index={idx + 1}
             isNew={idx === visibleCount - 1}
           />
         ))
