@@ -56,17 +56,17 @@ const Index = () => {
         setCurrentThread((prev) => (prev === nextThread ? prev : nextThread));
       }
 
-      // Progressive reveal logic
-      const scrollPosition = window.scrollY + window.innerHeight;
-      const documentHeight = document.documentElement.scrollHeight;
-      const scrollPercentage = scrollPosition / documentHeight;
-      const newVisibleCount = Math.min(
-        epigrams.length,
-        Math.max(1, Math.ceil(scrollPercentage * epigrams.length * 1.5))
-      );
-      
-      if (newVisibleCount > visibleCount) {
-        setVisibleCount(newVisibleCount);
+      // Progressive reveal logic - reveal next epigram when scrolled near bottom
+      if (visibleCount < epigrams.length) {
+        const lastVisibleArticle = articles[visibleCount - 1];
+        if (lastVisibleArticle) {
+          const rect = lastVisibleArticle.getBoundingClientRect();
+          const triggerPoint = window.innerHeight * 0.7; // Reveal when 70% down viewport
+          
+          if (rect.bottom < triggerPoint) {
+            setVisibleCount(prev => Math.min(prev + 1, epigrams.length));
+          }
+        }
       }
 
       ticking = false;
