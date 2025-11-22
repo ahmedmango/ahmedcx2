@@ -1,29 +1,40 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 interface HeaderProps {
   currentThread?: string;
 }
 
 const Header = ({ currentThread = "#0000" }: HeaderProps) => {
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const progressBarRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    let rafId: number | null = null;
+
     const updateScrollProgress = () => {
-      requestAnimationFrame(() => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+
+      rafId = requestAnimationFrame(() => {
         const doc = document.documentElement;
-        const scrollTop = doc.scrollTop;
+        const scrollTop = doc.scrollTop || document.body.scrollTop;
         const scrollHeight = doc.scrollHeight - doc.clientHeight;
-        const progress = (scrollTop / scrollHeight) * 100;
-        
-        setScrollProgress(progress);
+        const progress = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+
+        if (progressBarRef.current) {
+          progressBarRef.current.style.width = `${progress}%`;
+        }
       });
     };
 
     window.addEventListener('scroll', updateScrollProgress, { passive: true });
-    updateScrollProgress(); // Initial calculation
+    updateScrollProgress();
 
     return () => {
       window.removeEventListener('scroll', updateScrollProgress);
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
     };
   }, []);
 
@@ -45,9 +56,10 @@ const Header = ({ currentThread = "#0000" }: HeaderProps) => {
       {/* Progress bar */}
       <div className="absolute bottom-0 left-0 right-0 h-[3px] md:h-[1px] bg-transparent">
         <div 
+          ref={progressBarRef}
           className="h-full"
           style={{ 
-            width: `${scrollProgress}%`,
+            width: 0,
             backgroundColor: 'var(--progress-bar)',
             transition: 'width 0.12s ease-out'
           }}
