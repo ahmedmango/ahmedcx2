@@ -28,36 +28,48 @@ const Index = () => {
   useEffect(() => {
     if (epigrams.length === 0) return;
 
-    const articles = document.querySelectorAll<HTMLElement>('article[data-id]');
+    let ticking = false;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        let bestEntry: IntersectionObserverEntry | null = null;
+    const updateCurrentThreadFromScroll = () => {
+      const articles = document.querySelectorAll<HTMLElement>('article[data-id]');
+      if (!articles.length) return;
 
-        for (const entry of entries) {
-          if (!entry.isIntersecting) continue;
+      const viewportCenter = window.innerHeight / 2;
+      let bestId: number | null = null;
+      let smallestDistance = Infinity;
 
-          if (!bestEntry || entry.intersectionRatio > bestEntry.intersectionRatio) {
-            bestEntry = entry;
-          }
+      articles.forEach((article) => {
+        const rect = article.getBoundingClientRect();
+        const articleCenter = rect.top + rect.height / 2;
+        const distance = Math.abs(articleCenter - viewportCenter);
+
+        if (distance < smallestDistance) {
+          smallestDistance = distance;
+          const idAttr = article.getAttribute('data-id') || '0';
+          bestId = parseInt(idAttr, 10);
         }
+      });
 
-        if (!bestEntry) return;
-
-        const idAttr = (bestEntry.target as HTMLElement).getAttribute('data-id') || '0';
-        const id = parseInt(idAttr, 10);
-
-        setCurrentThread(`#${String(id).padStart(4, '0')}`);
-      },
-      {
-        threshold: [0.2, 0.4, 0.6],
+      if (bestId !== null && !Number.isNaN(bestId)) {
+        const nextThread = `#${String(bestId).padStart(4, '0')}`;
+        setCurrentThread((prev) => (prev === nextThread ? prev : nextThread));
       }
-    );
 
-    articles.forEach((article) => observer.observe(article));
+      ticking = false;
+    };
+
+    const handleScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(updateCurrentThreadFromScroll);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    updateCurrentThreadFromScroll();
 
     return () => {
-      observer.disconnect();
+      window.removeEventListener('scroll', handleScroll);
     };
   }, [epigrams]);
 
