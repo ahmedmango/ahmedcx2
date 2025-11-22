@@ -42,12 +42,12 @@ serve(async (req) => {
       );
     }
 
-    // POST - Save/update epigrams (admin only)
+    // POST - Save/update epigrams or handle delete (admin only)
     if (req.method === 'POST') {
       const body = await req.json();
-      const { write_key, epigram } = body;
+      const { write_key, epigram, delete_id } = body;
 
-      console.log('Save epigram request received');
+      console.log('Epigrams POST request received');
 
       // Validate write key
       const validWriteKey = Deno.env.get('WRITE_KEY');
@@ -58,6 +58,43 @@ serve(async (req) => {
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 401 
+          }
+        );
+      }
+
+      // Handle delete via POST to avoid browser DELETE issues
+      if (typeof delete_id !== 'undefined') {
+        console.log(`Deleting epigram via POST delete_id: ${delete_id}`);
+
+        const { error } = await supabase
+          .from('epigrams')
+          .delete()
+          .eq('id', delete_id);
+
+        if (error) {
+          console.error('Error deleting epigram via POST:', error);
+          throw error;
+        }
+
+        console.log('Successfully deleted epigram via POST');
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200 
+          }
+        );
+      }
+
+      // Special case: validation-only request from admin login
+      if (epigram && epigram.text === '__test__' && epigram.thread_id === 'test') {
+        console.log('Write key validation request - no DB changes');
+        return new Response(
+          JSON.stringify({ success: true }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
           }
         );
       }

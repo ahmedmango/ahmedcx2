@@ -253,25 +253,22 @@ const Admin = () => {
 
     setLoading(true);
     try {
-      console.log('Deleting epigram:', id);
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/epigrams?id=${id}&write_key=${encodeURIComponent(writeKey)}`;
-      console.log('Delete URL:', url);
-      
-      const response = await fetch(url, {
-        method: 'DELETE',
-      });
-
-      console.log('Delete response status:', response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Delete error response:', errorText);
-        let error;
-        try {
-          error = JSON.parse(errorText);
-        } catch {
-          error = { error: errorText };
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/epigrams`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            write_key: writeKey,
+            delete_id: id,
+          }),
         }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
         throw new Error(error.error || 'Failed to delete');
       }
 
