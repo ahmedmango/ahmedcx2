@@ -119,12 +119,12 @@ const Index = () => {
           </div>
         </div>
       ) : (
-        epigrams.map((epigram) => (
+        epigrams.map((epigram, index) => (
           <EpigramBlock
             key={epigram.id}
             text={epigram.text}
             title={epigram.title}
-            index={epigram.id}
+            index={index + 1}
           />
         ))
       )}
