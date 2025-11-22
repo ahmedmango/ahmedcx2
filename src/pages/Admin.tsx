@@ -295,45 +295,38 @@ const Admin = () => {
     const reorderedEpigrams = arrayMove(epigrams, oldIndex, newIndex);
     setEpigrams(reorderedEpigrams);
 
-    // Update display_order for all affected epigrams
+    // Send batch reorder request
     setLoading(true);
     try {
-      for (let i = 0; i < reorderedEpigrams.length; i++) {
-        const epigram = reorderedEpigrams[i];
-        const newDisplayOrder = i + 1;
-        
-        if (epigram.id) {
-          const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/epigrams`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                write_key: writeKey,
-                epigram: {
-                  id: epigram.id,
-                  text: epigram.text,
-                  thread_id: epigram.thread_id,
-                  title: epigram.title || null,
-                  display_order: newDisplayOrder
-                }
-              })
-            }
-          );
+      const reorderData = reorderedEpigrams.map((epigram, index) => ({
+        id: epigram.id,
+        display_order: index + 1
+      }));
 
-          if (!response.ok) {
-            throw new Error('Failed to update order');
-          }
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/epigrams`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            write_key: writeKey,
+            reorder_batch: reorderData
+          })
         }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update order');
       }
       
       toast.success("Order updated successfully");
       await loadEpigrams();
     } catch (error) {
       console.error('Error updating order:', error);
-      toast.error("Failed to update order");
+      toast.error(error instanceof Error ? error.message : "Failed to update order");
       await loadEpigrams(); // Reload to reset
     } finally {
       setLoading(false);

@@ -45,7 +45,7 @@ serve(async (req) => {
     // POST - Save/update epigrams or handle delete (admin only)
     if (req.method === 'POST') {
       const body = await req.json();
-      const { write_key, epigram, delete_id } = body;
+      const { write_key, epigram, delete_id, reorder_batch } = body;
 
       console.log('Epigrams POST request received');
 
@@ -60,6 +60,50 @@ serve(async (req) => {
             status: 401 
           }
         );
+      }
+
+      // Handle batch reordering to avoid unique constraint violations
+      if (reorder_batch && Array.isArray(reorder_batch)) {
+        console.log(`Batch reordering ${reorder_batch.length} epigrams`);
+        
+        try {
+          // First, set all display_order to temporary high values to avoid conflicts
+          const tempOffset = 10000;
+          for (let i = 0; i < reorder_batch.length; i++) {
+            const { id } = reorder_batch[i];
+            await supabase
+              .from('epigrams')
+              .update({ display_order: tempOffset + i })
+              .eq('id', id);
+          }
+          
+          // Then set them to their final values
+          for (let i = 0; i < reorder_batch.length; i++) {
+            const { id, display_order } = reorder_batch[i];
+            const { error } = await supabase
+              .from('epigrams')
+              .update({ display_order })
+              .eq('id', id);
+              
+            if (error) {
+              console.error('Error in batch reorder:', error);
+              throw error;
+            }
+          }
+          
+          console.log('Successfully reordered epigrams');
+          
+          return new Response(
+            JSON.stringify({ success: true }),
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200 
+            }
+          );
+        } catch (error) {
+          console.error('Batch reorder error:', error);
+          throw error;
+        }
       }
 
       // Handle delete via POST to avoid browser DELETE issues
