@@ -14,6 +14,7 @@ interface Epigram {
   text: string;
   thread_id: string;
   created_at?: string;
+  title?: string;
 }
 
 const Admin = () => {
@@ -24,8 +25,10 @@ const Admin = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
   const [editThreadId, setEditThreadId] = useState("default");
+  const [editTitle, setEditTitle] = useState("");
   const [newText, setNewText] = useState("");
   const [newThreadId, setNewThreadId] = useState("default");
+  const [newTitle, setNewTitle] = useState("");
   const [loading, setLoading] = useState(false);
   const { settings, updateSetting, loadSettings } = useSettings();
 
@@ -90,7 +93,8 @@ const Admin = () => {
             write_key: writeKey,
             epigram: {
               text: newText,
-              thread_id: newThreadId
+              thread_id: newThreadId,
+              title: newTitle || null
             }
           })
         }
@@ -104,6 +108,7 @@ const Admin = () => {
       toast.success("Epigram created successfully");
       setNewText("");
       setNewThreadId("default");
+      setNewTitle("");
       await loadEpigrams();
     } catch (error) {
       console.error('Error creating epigram:', error);
@@ -117,6 +122,7 @@ const Admin = () => {
     setEditingId(epigram.id || null);
     setEditText(epigram.text);
     setEditThreadId(epigram.thread_id);
+    setEditTitle(epigram.title || "");
   };
 
   const handleSaveEdit = async () => {
@@ -139,7 +145,8 @@ const Admin = () => {
             epigram: {
               id: editingId,
               text: editText,
-              thread_id: editThreadId
+              thread_id: editThreadId,
+              title: editTitle || null
             }
           })
         }
@@ -154,6 +161,7 @@ const Admin = () => {
       setEditingId(null);
       setEditText("");
       setEditThreadId("default");
+      setEditTitle("");
       await loadEpigrams();
     } catch (error) {
       console.error('Error updating epigram:', error);
@@ -367,6 +375,17 @@ const Admin = () => {
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block text-muted-foreground">
+                Title <span className="text-xs">(Optional - bold, centered, larger)</span>
+              </label>
+              <Input
+                placeholder="Optional title for this epigram..."
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                className="font-serif text-lg"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block text-muted-foreground">
                 Text <span className="text-xs">(Press Enter for line breaks)</span>
               </label>
               <Textarea
@@ -407,6 +426,17 @@ const Admin = () => {
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-2 block text-muted-foreground">
+                      Title <span className="text-xs">(Optional)</span>
+                    </label>
+                    <Input
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      placeholder="Optional title..."
+                      className="font-serif text-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block text-muted-foreground">
                       Text
                     </label>
                     <Textarea
@@ -426,6 +456,7 @@ const Admin = () => {
                         setEditingId(null);
                         setEditText("");
                         setEditThreadId("default");
+                        setEditTitle("");
                       }}
                       disabled={loading}
                     >
@@ -459,6 +490,11 @@ const Admin = () => {
                       </Button>
                     </div>
                   </div>
+                  {epigram.title && (
+                    <h3 className="text-2xl font-bold mb-4 text-center">
+                      {epigram.title}
+                    </h3>
+                  )}
                   <p className="text-lg leading-relaxed font-serif whitespace-pre-wrap">
                     {epigram.text}
                   </p>

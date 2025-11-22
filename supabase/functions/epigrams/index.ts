@@ -80,7 +80,8 @@ serve(async (req) => {
           .from('epigrams')
           .update({
             text: epigram.text,
-            thread_id: epigram.thread_id || 'default'
+            thread_id: epigram.thread_id || 'default',
+            title: epigram.title || null
           })
           .eq('id', epigram.id)
           .select()
@@ -91,7 +92,8 @@ serve(async (req) => {
           .from('epigrams')
           .insert({
             text: epigram.text,
-            thread_id: epigram.thread_id || 'default'
+            thread_id: epigram.thread_id || 'default',
+            title: epigram.title || null
           })
           .select()
           .single();

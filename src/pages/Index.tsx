@@ -11,6 +11,7 @@ interface Epigram {
   text: string;
   thread_id: string;
   created_at: string;
+  title?: string;
 }
 
 const Index = () => {
@@ -110,6 +111,7 @@ const Index = () => {
           <EpigramBlock
             key={epigram.id}
             text={epigram.text}
+            title={epigram.title}
             index={index}
           />
         ))
