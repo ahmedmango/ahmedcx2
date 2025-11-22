@@ -13,7 +13,7 @@ const EpigramBlock = ({ text, index, title }: EpigramBlockProps) => {
       <div className="max-w-2xl mx-auto">
         {title && (
           <h2 
-            className="text-3xl md:text-4xl lg:text-5xl font-bold text-center mb-8 md:mb-12"
+            className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-center mb-8 md:mb-12"
             style={{ color: 'var(--body-text)' }}
           >
             {title}
