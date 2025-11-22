@@ -77,7 +77,7 @@ const Index = () => {
 
   return (
     <div 
-      className="relative overflow-y-scroll h-screen scroll-smooth"
+      className="relative overflow-y-scroll h-screen scroll-smooth scroll-container"
       style={{
         '--header-text': `hsl(${settings.header_text_color})`,
         '--thread-number': `hsl(${settings.thread_number_color})`,

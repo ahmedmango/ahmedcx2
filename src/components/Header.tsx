@@ -8,7 +8,7 @@ const Header = ({ currentThread = "#0000" }: HeaderProps) => {
   const [scrollProgress, setScrollProgress] = useState(0);
 
   useEffect(() => {
-    const container = document.querySelector('.snap-y');
+    const container = document.querySelector('.scroll-container');
     if (!container) return;
 
     let rafId: number;
@@ -28,8 +28,8 @@ const Header = ({ currentThread = "#0000" }: HeaderProps) => {
         const progress = scrollableHeight > 0 ? (scrollTop / scrollableHeight) * 100 : 0;
         const newProgress = Math.min(progress, 100);
         
-        // Only update if changed significantly (reduces repaints)
-        if (Math.abs(newProgress - lastProgress) > 0.1) {
+        // Smoother updates with lower threshold
+        if (Math.abs(newProgress - lastProgress) > 0.05) {
           setScrollProgress(newProgress);
           lastProgress = newProgress;
         }
@@ -65,7 +65,7 @@ const Header = ({ currentThread = "#0000" }: HeaderProps) => {
       {/* Progress bar */}
       <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-border">
         <div 
-          className="h-full transition-all duration-150 ease-out"
+          className="h-full transition-all duration-100 ease-linear"
           style={{ 
             width: `${scrollProgress}%`,
             backgroundColor: 'var(--progress-bar)'
