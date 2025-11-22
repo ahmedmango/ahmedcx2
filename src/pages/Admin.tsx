@@ -8,6 +8,9 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSettings } from "@/hooks/useSettings";
 import { hexToHSL, hslToHex } from "@/lib/colorUtils";
+import { DndContext, DragEndEvent, closestCenter } from "@dnd-kit/core";
+import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableEpigramCard } from "@/components/SortableEpigramCard";
 
 interface Epigram {
   id?: number;
@@ -216,15 +219,25 @@ const Admin = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/epigrams?id=${id}&write_key=${writeKey}`,
-        {
-          method: 'DELETE',
-        }
-      );
+      console.log('Deleting epigram:', id);
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/epigrams?id=${id}&write_key=${encodeURIComponent(writeKey)}`;
+      console.log('Delete URL:', url);
+      
+      const response = await fetch(url, {
+        method: 'DELETE',
+      });
 
+      console.log('Delete response status:', response.status);
+      
       if (!response.ok) {
-        const error = await response.json();
+        const errorText = await response.text();
+        console.error('Delete error response:', errorText);
+        let error;
+        try {
+          error = JSON.parse(errorText);
+        } catch {
+          error = { error: errorText };
+        }
         throw new Error(error.error || 'Failed to delete');
       }
 
@@ -233,6 +246,64 @@ const Admin = () => {
     } catch (error) {
       console.error('Error deleting epigram:', error);
       toast.error(error instanceof Error ? error.message : "Failed to delete epigram");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = epigrams.findIndex((e) => e.id === active.id);
+    const newIndex = epigrams.findIndex((e) => e.id === over.id);
+
+    const reorderedEpigrams = arrayMove(epigrams, oldIndex, newIndex);
+    setEpigrams(reorderedEpigrams);
+
+    // Update display_order for all affected epigrams
+    setLoading(true);
+    try {
+      for (let i = 0; i < reorderedEpigrams.length; i++) {
+        const epigram = reorderedEpigrams[i];
+        const newDisplayOrder = i + 1;
+        
+        if (epigram.id) {
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/epigrams`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                write_key: writeKey,
+                epigram: {
+                  id: epigram.id,
+                  text: epigram.text,
+                  thread_id: epigram.thread_id,
+                  title: epigram.title || null,
+                  display_order: newDisplayOrder
+                }
+              })
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error('Failed to update order');
+          }
+        }
+      }
+      
+      toast.success("Order updated successfully");
+      await loadEpigrams();
+    } catch (error) {
+      console.error('Error updating order:', error);
+      toast.error("Failed to update order");
+      await loadEpigrams(); // Reload to reset
     } finally {
       setLoading(false);
     }
@@ -442,104 +513,34 @@ const Admin = () => {
 
         {/* Existing Epigrams */}
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold mb-4">All Epigrams</h2>
-          {epigrams.map((epigram) => (
-            <Card key={epigram.id} className="overflow-hidden">
-              {editingId === epigram.id ? (
-                <div className="p-6 space-y-4 bg-muted/20">
-                  <div className="flex justify-between items-center">
-                    <label className="text-sm font-medium text-muted-foreground">
-                      Editing #{String(epigram.id).padStart(4, '0')}
-                    </label>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block text-muted-foreground">
-                      Thread ID
-                    </label>
-                    <Input
-                      value={editThreadId}
-                      onChange={(e) => setEditThreadId(e.target.value)}
-                      className="max-w-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block text-muted-foreground">
-                      Title <span className="text-xs">(Optional)</span>
-                    </label>
-                    <Input
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      placeholder="Optional title..."
-                      className="font-serif text-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block text-muted-foreground">
-                      Text
-                    </label>
-                    <Textarea
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                      rows={10}
-                      className="font-serif text-lg resize-none"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button onClick={handleSaveEdit} disabled={loading}>
-                      {loading ? "Saving..." : "Save Changes"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setEditingId(null);
-                        setEditText("");
-                        setEditThreadId("default");
-                        setEditTitle("");
-                      }}
-                      disabled={loading}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-6">
-                  <div className="flex justify-between items-start gap-4 mb-4">
-                    <div className="flex-1">
-                      <div className="text-xs text-muted-foreground mb-1">
-                        #{String(epigram.id).padStart(4, '0')} • Thread: {epigram.thread_id}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(epigram)}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => epigram.id && handleDelete(epigram.id)}
-                        disabled={loading}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                  {epigram.title && (
-                    <h3 className="text-2xl font-bold mb-4 text-center">
-                      {epigram.title}
-                    </h3>
-                  )}
-                  <p className="text-lg leading-relaxed font-serif whitespace-pre-wrap">
-                    {epigram.text}
-                  </p>
-                </div>
-              )}
-            </Card>
-          ))}
+          <h2 className="text-xl font-semibold mb-4">All Epigrams (Drag to Reorder)</h2>
+          <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={epigrams.map(e => e.id || 0)} strategy={verticalListSortingStrategy}>
+              {epigrams.map((epigram) => (
+                <SortableEpigramCard
+                  key={epigram.id}
+                  epigram={epigram}
+                  editingId={editingId}
+                  editText={editText}
+                  editThreadId={editThreadId}
+                  editTitle={editTitle}
+                  loading={loading}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onSaveEdit={handleSaveEdit}
+                  onCancelEdit={() => {
+                    setEditingId(null);
+                    setEditText("");
+                    setEditThreadId("default");
+                    setEditTitle("");
+                  }}
+                  setEditText={setEditText}
+                  setEditThreadId={setEditThreadId}
+                  setEditTitle={setEditTitle}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
         </div>
       </div>
     </div>

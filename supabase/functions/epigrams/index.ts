@@ -76,13 +76,20 @@ serve(async (req) => {
       let result;
       if (epigram.id) {
         console.log(`Updating epigram ${epigram.id}`);
+        const updateData: any = {
+          text: epigram.text,
+          thread_id: epigram.thread_id || 'default',
+          title: epigram.title || null
+        };
+        
+        // Only update display_order if explicitly provided
+        if (epigram.display_order !== undefined) {
+          updateData.display_order = epigram.display_order;
+        }
+        
         result = await supabase
           .from('epigrams')
-          .update({
-            text: epigram.text,
-            thread_id: epigram.thread_id || 'default',
-            title: epigram.title || null
-          })
+          .update(updateData)
           .eq('id', epigram.id)
           .select()
           .single();
