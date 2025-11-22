@@ -28,7 +28,7 @@ const Index = () => {
   useEffect(() => {
     if (epigrams.length === 0) return;
 
-    const articles = document.querySelectorAll<HTMLElement>('article[data-index]');
+    const articles = document.querySelectorAll<HTMLElement>('article[data-id]');
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -44,10 +44,10 @@ const Index = () => {
 
         if (!bestEntry) return;
 
-        const indexAttr = (bestEntry.target as HTMLElement).getAttribute('data-index') || '0';
-        const index = parseInt(indexAttr, 10);
+        const idAttr = (bestEntry.target as HTMLElement).getAttribute('data-id') || '0';
+        const id = parseInt(idAttr, 10);
 
-        setCurrentThread(`#${String(index).padStart(4, '0')}`);
+        setCurrentThread(`#${String(id).padStart(4, '0')}`);
       },
       {
         threshold: [0.2, 0.4, 0.6],
@@ -107,12 +107,12 @@ const Index = () => {
           </div>
         </div>
       ) : (
-        epigrams.map((epigram, index) => (
+        epigrams.map((epigram) => (
           <EpigramBlock
             key={epigram.id}
             text={epigram.text}
             title={epigram.title}
-            index={index}
+            index={epigram.id}
           />
         ))
       )}
