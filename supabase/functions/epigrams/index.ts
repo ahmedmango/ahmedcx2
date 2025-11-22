@@ -76,85 +76,24 @@ serve(async (req) => {
       let result;
       if (epigram.id) {
         console.log(`Updating epigram ${epigram.id}`);
-        
-        // Get the current display_order of the epigram being updated
-        const { data: currentEpigram } = await supabase
-          .from('epigrams')
-          .select('display_order')
-          .eq('id', epigram.id)
-          .single();
-        
-        const oldOrder = currentEpigram?.display_order;
-        const newOrder = epigram.display_order;
-        
-        // If display_order is changing, we need to reorder
-        if (oldOrder !== newOrder) {
-          if (newOrder < oldOrder) {
-            // Moving up: shift epigrams between newOrder and oldOrder down
-            await supabase
-              .from('epigrams')
-              .update({ display_order: supabase.rpc('increment', {}) })
-              .gte('display_order', newOrder)
-              .lt('display_order', oldOrder)
-              .neq('id', epigram.id);
-          } else {
-            // Moving down: shift epigrams between oldOrder and newOrder up
-            await supabase
-              .from('epigrams')
-              .update({ display_order: supabase.rpc('decrement', {}) })
-              .gt('display_order', oldOrder)
-              .lte('display_order', newOrder)
-              .neq('id', epigram.id);
-          }
-        }
-        
         result = await supabase
           .from('epigrams')
           .update({
             text: epigram.text,
             thread_id: epigram.thread_id || 'default',
-            title: epigram.title || null,
-            display_order: newOrder
+            title: epigram.title || null
           })
           .eq('id', epigram.id)
           .select()
           .single();
       } else {
         console.log('Creating new epigram');
-        const targetOrder = epigram.display_order || 1;
-        
-        // Shift all epigrams at and after the target position down by 1
-        const { error: shiftError } = await supabase.rpc('shift_epigrams_down', { 
-          from_order: targetOrder 
-        });
-        
-        if (shiftError) {
-          console.error('Error shifting epigrams:', shiftError);
-          // If the function doesn't exist, do it manually
-          await supabase
-            .from('epigrams')
-            .select('id, display_order')
-            .gte('display_order', targetOrder)
-            .order('display_order', { ascending: false })
-            .then(async ({ data: epigramsToShift }) => {
-              if (epigramsToShift) {
-                for (const ep of epigramsToShift) {
-                  await supabase
-                    .from('epigrams')
-                    .update({ display_order: ep.display_order + 1 })
-                    .eq('id', ep.id);
-                }
-              }
-            });
-        }
-        
         result = await supabase
           .from('epigrams')
           .insert({
             text: epigram.text,
             thread_id: epigram.thread_id || 'default',
-            title: epigram.title || null,
-            display_order: targetOrder
+            title: epigram.title || null
           })
           .select()
           .single();
@@ -207,13 +146,6 @@ serve(async (req) => {
         );
       }
 
-      // Get the display_order of the epigram being deleted
-      const { data: deletedEpigram } = await supabase
-        .from('epigrams')
-        .select('display_order')
-        .eq('id', id)
-        .single();
-
       const { error } = await supabase
         .from('epigrams')
         .delete()
@@ -222,24 +154,6 @@ serve(async (req) => {
       if (error) {
         console.error('Error deleting epigram:', error);
         throw error;
-      }
-
-      // Shift all epigrams after the deleted one up by 1
-      if (deletedEpigram?.display_order) {
-        await supabase
-          .from('epigrams')
-          .select('id, display_order')
-          .gt('display_order', deletedEpigram.display_order)
-          .then(async ({ data: epigramsToShift }) => {
-            if (epigramsToShift) {
-              for (const ep of epigramsToShift) {
-                await supabase
-                  .from('epigrams')
-                  .update({ display_order: ep.display_order - 1 })
-                  .eq('id', ep.id);
-              }
-            }
-          });
       }
 
       console.log('Successfully deleted epigram');

@@ -15,7 +15,6 @@ interface Epigram {
   thread_id: string;
   created_at?: string;
   title?: string;
-  display_order?: number;
 }
 
 const Admin = () => {
@@ -27,11 +26,9 @@ const Admin = () => {
   const [editText, setEditText] = useState("");
   const [editThreadId, setEditThreadId] = useState("default");
   const [editTitle, setEditTitle] = useState("");
-  const [editDisplayOrder, setEditDisplayOrder] = useState<number>(1);
   const [newText, setNewText] = useState("");
   const [newThreadId, setNewThreadId] = useState("default");
   const [newTitle, setNewTitle] = useState("");
-  const [newDisplayOrder, setNewDisplayOrder] = useState<number>(1);
   const [loading, setLoading] = useState(false);
   const { settings, updateSetting, loadSettings } = useSettings();
 
@@ -105,16 +102,10 @@ const Admin = () => {
       const { data, error } = await supabase
         .from('epigrams')
         .select('*')
-        .order('display_order', { ascending: true });
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
       setEpigrams(data || []);
-      
-      // Set next available display_order for new epigrams
-      if (data && data.length > 0) {
-        const maxOrder = Math.max(...data.map(e => e.display_order || 0));
-        setNewDisplayOrder(maxOrder + 1);
-      }
     } catch (error) {
       console.error('Error loading epigrams:', error);
       toast.error("Failed to load epigrams");
@@ -141,8 +132,7 @@ const Admin = () => {
             epigram: {
               text: newText,
               thread_id: newThreadId,
-              title: newTitle || null,
-              display_order: newDisplayOrder
+              title: newTitle || null
             }
           })
         }
@@ -171,7 +161,6 @@ const Admin = () => {
     setEditText(epigram.text);
     setEditThreadId(epigram.thread_id);
     setEditTitle(epigram.title || "");
-    setEditDisplayOrder(epigram.display_order || 1);
   };
 
   const handleSaveEdit = async () => {
@@ -195,8 +184,7 @@ const Admin = () => {
               id: editingId,
               text: editText,
               thread_id: editThreadId,
-              title: editTitle || null,
-              display_order: editDisplayOrder
+              title: editTitle || null
             }
           })
         }
@@ -212,7 +200,6 @@ const Admin = () => {
       setEditText("");
       setEditThreadId("default");
       setEditTitle("");
-      setEditDisplayOrder(1);
       await loadEpigrams();
     } catch (error) {
       console.error('Error updating epigram:', error);
@@ -415,22 +402,6 @@ const Admin = () => {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-2 block text-muted-foreground">
-                Position (Thread #) <span className="text-xs font-normal">(Lower numbers appear first)</span>
-              </label>
-              <Input
-                type="number"
-                min="1"
-                placeholder="1"
-                value={newDisplayOrder}
-                onChange={(e) => setNewDisplayOrder(parseInt(e.target.value) || 1)}
-                className="max-w-xs"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Set to {newDisplayOrder} to add at the end, or choose a specific position
-              </p>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block text-muted-foreground">
                 Thread ID
               </label>
               <Input
@@ -478,20 +449,8 @@ const Admin = () => {
                 <div className="p-6 space-y-4 bg-muted/20">
                   <div className="flex justify-between items-center">
                     <label className="text-sm font-medium text-muted-foreground">
-                      Editing Thread #{String(epigram.display_order).padStart(4, '0')}
+                      Editing #{String(epigram.id).padStart(4, '0')}
                     </label>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block text-muted-foreground">
-                      Position (Thread #) <span className="text-xs font-normal">(Lower numbers appear first)</span>
-                    </label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={editDisplayOrder}
-                      onChange={(e) => setEditDisplayOrder(parseInt(e.target.value) || 1)}
-                      className="max-w-xs"
-                    />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-2 block text-muted-foreground">
@@ -536,7 +495,6 @@ const Admin = () => {
                         setEditText("");
                         setEditThreadId("default");
                         setEditTitle("");
-                        setEditDisplayOrder(1);
                       }}
                       disabled={loading}
                     >
@@ -549,7 +507,7 @@ const Admin = () => {
                   <div className="flex justify-between items-start gap-4 mb-4">
                     <div className="flex-1">
                       <div className="text-xs text-muted-foreground mb-1">
-                        Thread #{String(epigram.display_order).padStart(4, '0')} • Thread ID: {epigram.thread_id}
+                        #{String(epigram.id).padStart(4, '0')} • Thread: {epigram.thread_id}
                       </div>
                     </div>
                     <div className="flex gap-2">

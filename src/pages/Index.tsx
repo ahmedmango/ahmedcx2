@@ -12,7 +12,6 @@ interface Epigram {
   thread_id: string;
   created_at: string;
   title?: string;
-  display_order: number;
 }
 
 const Index = () => {
@@ -20,7 +19,6 @@ const Index = () => {
   const [epigrams, setEpigrams] = useState<Epigram[]>([]);
   const [currentThread, setCurrentThread] = useState("#0000");
   const [loading, setLoading] = useState(true);
-  const [visibleCount, setVisibleCount] = useState(1);
   const { settings, loading: settingsLoading } = useSettings();
 
   useEffect(() => {
@@ -57,19 +55,6 @@ const Index = () => {
         setCurrentThread((prev) => (prev === nextThread ? prev : nextThread));
       }
 
-      // Progressive reveal logic - reveal next epigram when scrolled near bottom
-      if (visibleCount < epigrams.length) {
-        const lastVisibleArticle = articles[visibleCount - 1];
-        if (lastVisibleArticle) {
-          const rect = lastVisibleArticle.getBoundingClientRect();
-          const triggerPoint = window.innerHeight * 0.7; // Reveal when 70% down viewport
-          
-          if (rect.bottom < triggerPoint) {
-            setVisibleCount(prev => Math.min(prev + 1, epigrams.length));
-          }
-        }
-      }
-
       ticking = false;
     };
 
@@ -86,14 +71,14 @@ const Index = () => {
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [epigrams, visibleCount]);
+  }, [epigrams]);
 
   const loadEpigrams = async () => {
     try {
       const { data, error } = await supabase
         .from('epigrams')
         .select('*')
-        .order('display_order', { ascending: true });
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
       setEpigrams(data || []);
@@ -134,13 +119,12 @@ const Index = () => {
           </div>
         </div>
       ) : (
-        epigrams.slice(0, visibleCount).map((epigram, idx) => (
+        epigrams.map((epigram) => (
           <EpigramBlock
             key={epigram.id}
             text={epigram.text}
             title={epigram.title}
-            index={idx + 1}
-            isNew={idx === visibleCount - 1}
+            index={epigram.id}
           />
         ))
       )}
