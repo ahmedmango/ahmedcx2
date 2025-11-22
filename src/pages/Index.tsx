@@ -28,18 +28,23 @@ const Index = () => {
     const handleScroll = () => {
       requestAnimationFrame(() => {
         const articles = document.querySelectorAll('article[data-index]');
+        const viewportCenter = window.innerHeight / 2;
         
-        let currentIndex = 0;
+        let closestIndex = 0;
+        let closestDistance = Infinity;
         
         articles.forEach((article) => {
           const rect = article.getBoundingClientRect();
-          // If article is in viewport (considering some threshold)
-          if (rect.top < window.innerHeight / 2 && rect.bottom > window.innerHeight / 2) {
-            currentIndex = parseInt(article.getAttribute('data-index') || '0');
+          const articleCenter = rect.top + rect.height / 2;
+          const distance = Math.abs(articleCenter - viewportCenter);
+          
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closestIndex = parseInt(article.getAttribute('data-index') || '0');
           }
         });
         
-        setCurrentThread(`#${String(currentIndex).padStart(4, '0')}`);
+        setCurrentThread(`#${String(closestIndex).padStart(4, '0')}`);
       });
     };
 
