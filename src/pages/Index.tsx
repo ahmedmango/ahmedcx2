@@ -25,33 +25,39 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    const handleScroll = () => {
-      requestAnimationFrame(() => {
-        const articles = document.querySelectorAll('article[data-index]');
-        const viewportCenter = window.innerHeight / 2;
-        
-        let closestIndex = 0;
-        let closestDistance = Infinity;
-        
-        articles.forEach((article) => {
-          const rect = article.getBoundingClientRect();
-          const articleCenter = rect.top + rect.height / 2;
-          const distance = Math.abs(articleCenter - viewportCenter);
-          
-          if (distance < closestDistance) {
-            closestDistance = distance;
-            closestIndex = parseInt(article.getAttribute('data-index') || '0');
-          }
-        });
-        
-        setCurrentThread(`#${String(closestIndex).padStart(4, '0')}`);
-      });
-    };
+    if (epigrams.length === 0) return;
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll(); // Initial check
-    
-    return () => window.removeEventListener('scroll', handleScroll);
+    const articles = document.querySelectorAll<HTMLElement>('article[data-index]');
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        let bestEntry: IntersectionObserverEntry | null = null;
+
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+
+          if (!bestEntry || entry.intersectionRatio > bestEntry.intersectionRatio) {
+            bestEntry = entry;
+          }
+        }
+
+        if (!bestEntry) return;
+
+        const indexAttr = (bestEntry.target as HTMLElement).getAttribute('data-index') || '0';
+        const index = parseInt(indexAttr, 10);
+
+        setCurrentThread(`#${String(index).padStart(4, '0')}`);
+      },
+      {
+        threshold: [0.2, 0.4, 0.6],
+      }
+    );
+
+    articles.forEach((article) => observer.observe(article));
+
+    return () => {
+      observer.disconnect();
+    };
   }, [epigrams]);
 
   const loadEpigrams = async () => {
