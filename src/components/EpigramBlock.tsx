@@ -2,12 +2,13 @@ interface EpigramBlockProps {
   text: string;
   index: number;
   title?: string;
+  isNew?: boolean;
 }
 
-const EpigramBlock = ({ text, index, title }: EpigramBlockProps) => {
+const EpigramBlock = ({ text, index, title, isNew = false }: EpigramBlockProps) => {
   return (
     <article 
-      className="py-16 md:py-20 px-6 md:px-12"
+      className={`py-16 md:py-20 px-6 md:px-12 transition-opacity duration-700 ${isNew ? 'animate-fade-in' : ''}`}
       data-id={index}
     >
       <div className="max-w-2xl mx-auto">
