@@ -1,10 +1,10 @@
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 
 interface HeaderProps {
   currentThread?: string;
 }
 
-const Header = ({ currentThread = "#0000" }: HeaderProps) => {
+const Header = memo(({ currentThread = "#0000" }: HeaderProps) => {
   const progressBarRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -67,6 +67,8 @@ const Header = ({ currentThread = "#0000" }: HeaderProps) => {
       </div>
     </header>
   );
-};
+});
+
+Header.displayName = 'Header';
 
 export default Header;

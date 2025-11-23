@@ -42,10 +42,22 @@ const Index = () => {
     if (epigrams.length === 0) return;
 
     let ticking = false;
+    let lastUpdateTime = 0;
+    const THROTTLE_MS = 100;
 
     const updateCurrentThreadFromScroll = () => {
+      const now = Date.now();
+      if (now - lastUpdateTime < THROTTLE_MS) {
+        ticking = false;
+        return;
+      }
+      lastUpdateTime = now;
+
       const articles = document.querySelectorAll<HTMLElement>('article[data-id]');
-      if (!articles.length) return;
+      if (!articles.length) {
+        ticking = false;
+        return;
+      }
 
       const viewportCenter = window.innerHeight / 2;
       let bestId: number | null = null;
