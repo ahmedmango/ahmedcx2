@@ -8,33 +8,32 @@ const Header = memo(({ currentThread = "#0000" }: HeaderProps) => {
   const progressBarRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    let rafId: number | null = null;
+    let ticking = false;
 
     const updateScrollProgress = () => {
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
+      const doc = document.documentElement;
+      const scrollTop = doc.scrollTop || document.body.scrollTop;
+      const scrollHeight = doc.scrollHeight - doc.clientHeight;
+      const progress = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+
+      if (progressBarRef.current) {
+        progressBarRef.current.style.width = `${progress}%`;
       }
-
-      rafId = requestAnimationFrame(() => {
-        const doc = document.documentElement;
-        const scrollTop = doc.scrollTop || document.body.scrollTop;
-        const scrollHeight = doc.scrollHeight - doc.clientHeight;
-        const progress = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
-
-        if (progressBarRef.current) {
-          progressBarRef.current.style.width = `${progress}%`;
-        }
-      });
+      ticking = false;
     };
 
-    window.addEventListener('scroll', updateScrollProgress, { passive: true });
+    const handleScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(updateScrollProgress);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
     updateScrollProgress();
 
     return () => {
-      window.removeEventListener('scroll', updateScrollProgress);
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-      }
+      window.removeEventListener('scroll', handleScroll);
     };
   }, []);
 
@@ -61,7 +60,7 @@ const Header = memo(({ currentThread = "#0000" }: HeaderProps) => {
           style={{ 
             width: 0,
             backgroundColor: 'var(--progress-bar)',
-            transition: 'width 0.12s ease-out'
+            willChange: 'width'
           }}
         />
       </div>
