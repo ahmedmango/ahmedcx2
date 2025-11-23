@@ -23,79 +23,16 @@ const Index = () => {
 
   useEffect(() => {
     loadEpigrams();
-    return logScrollSession();
   }, []);
-
-  const logScrollSession = () => {
-    const sessionId = crypto.randomUUID();
-    const startTime = Date.now();
-    let maxThreadReached = 0;
-    let maxScrollDepth = 0;
-
-    const updateScrollData = () => {
-      const currentThread = parseInt(document.querySelector('article[data-id]')?.getAttribute('data-id') || '0');
-      maxThreadReached = Math.max(maxThreadReached, currentThread);
-      
-      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const scrolled = window.scrollY;
-      const scrollPercent = scrollHeight > 0 ? Math.round((scrolled / scrollHeight) * 100) : 0;
-      maxScrollDepth = Math.max(maxScrollDepth, scrollPercent);
-    };
-
-    const saveScrollData = async () => {
-      const sessionDuration = Math.round((Date.now() - startTime) / 1000);
-      
-      try {
-        await supabase
-          .from('scroll_tracking')
-          .insert({
-            referrer: document.referrer || null,
-            max_thread_reached: maxThreadReached,
-            scroll_depth_percentage: maxScrollDepth,
-            session_duration_seconds: sessionDuration,
-          });
-      } catch (error) {
-        console.error('Error logging scroll data:', error);
-      }
-    };
-
-    const handleScroll = () => updateScrollData();
-    const handleUnload = () => saveScrollData();
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('beforeunload', handleUnload);
-
-    // Save data every 30 seconds as backup
-    const interval = setInterval(saveScrollData, 30000);
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('beforeunload', handleUnload);
-      clearInterval(interval);
-      saveScrollData();
-    };
-  };
 
   useEffect(() => {
     if (epigrams.length === 0) return;
 
     let ticking = false;
-    let lastUpdateTime = 0;
-    const THROTTLE_MS = 100;
 
     const updateCurrentThreadFromScroll = () => {
-      const now = Date.now();
-      if (now - lastUpdateTime < THROTTLE_MS) {
-        ticking = false;
-        return;
-      }
-      lastUpdateTime = now;
-
       const articles = document.querySelectorAll<HTMLElement>('article[data-id]');
-      if (!articles.length) {
-        ticking = false;
-        return;
-      }
+      if (!articles.length) return;
 
       const viewportCenter = window.innerHeight / 2;
       let bestId: number | null = null;
@@ -155,10 +92,7 @@ const Index = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="relative w-16 h-16">
-          <div className="absolute inset-0 border-4 border-muted rounded-full"></div>
-          <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-        </div>
+        <div className="text-muted-foreground">Loading...</div>
       </div>
     );
   }

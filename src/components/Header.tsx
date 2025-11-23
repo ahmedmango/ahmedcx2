@@ -1,49 +1,40 @@
-import { memo, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 interface HeaderProps {
   currentThread?: string;
 }
 
-const Header = memo(({ currentThread = "#0000" }: HeaderProps) => {
+const Header = ({ currentThread = "#0000" }: HeaderProps) => {
   const progressBarRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    let ticking = false;
-    let lastScrollTop = 0;
-    let lastProgress = 0;
+    let rafId: number | null = null;
 
     const updateScrollProgress = () => {
-      const doc = document.documentElement;
-      const scrollTop = doc.scrollTop || document.body.scrollTop;
-      const scrollHeight = doc.scrollHeight - doc.clientHeight;
-      let progress = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
-
-      // Prevent slight backwards movement while user is scrolling down
-      if (scrollTop >= lastScrollTop) {
-        progress = Math.max(progress, lastProgress);
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
       }
 
-      if (progressBarRef.current) {
-        progressBarRef.current.style.width = `${progress}%`;
-      }
+      rafId = requestAnimationFrame(() => {
+        const doc = document.documentElement;
+        const scrollTop = doc.scrollTop || document.body.scrollTop;
+        const scrollHeight = doc.scrollHeight - doc.clientHeight;
+        const progress = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
 
-      lastScrollTop = scrollTop;
-      lastProgress = progress;
-      ticking = false;
+        if (progressBarRef.current) {
+          progressBarRef.current.style.width = `${progress}%`;
+        }
+      });
     };
 
-    const handleScroll = () => {
-      if (!ticking) {
-        ticking = true;
-        requestAnimationFrame(updateScrollProgress);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('scroll', updateScrollProgress, { passive: true });
     updateScrollProgress();
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', updateScrollProgress);
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
     };
   }, []);
 
@@ -70,14 +61,12 @@ const Header = memo(({ currentThread = "#0000" }: HeaderProps) => {
           style={{ 
             width: 0,
             backgroundColor: 'var(--progress-bar)',
-            willChange: 'width'
+            transition: 'width 0.12s ease-out'
           }}
         />
       </div>
     </header>
   );
-});
-
-Header.displayName = 'Header';
+};
 
 export default Header;

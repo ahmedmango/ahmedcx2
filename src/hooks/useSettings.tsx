@@ -8,29 +8,12 @@ interface Settings {
   body_text_color: string;
 }
 
-const CACHE_KEY = 'epigram_settings_cache';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
 export const useSettings = () => {
-  const [settings, setSettings] = useState<Settings>(() => {
-    try {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < CACHE_DURATION) {
-          return data;
-        }
-      }
-    } catch (e) {
-      console.error('Error reading cached settings:', e);
-    }
-    
-    return {
-      header_text_color: '0 0% 45%',
-      thread_number_color: '5 100% 66%',
-      progress_bar_color: '5 100% 66%',
-      body_text_color: '0 0% 15%'
-    };
+  const [settings, setSettings] = useState<Settings>({
+    header_text_color: '0 0% 45%',
+    thread_number_color: '5 100% 66%',
+    progress_bar_color: '5 100% 66%',
+    body_text_color: '0 0% 15%'
   });
   const [loading, setLoading] = useState(true);
 
@@ -49,16 +32,6 @@ export const useSettings = () => {
         }, {} as Settings);
         
         setSettings(settingsObj);
-        
-        // Cache the settings
-        try {
-          localStorage.setItem(CACHE_KEY, JSON.stringify({
-            data: settingsObj,
-            timestamp: Date.now()
-          }));
-        } catch (e) {
-          console.error('Error caching settings:', e);
-        }
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -76,19 +49,7 @@ export const useSettings = () => {
 
       if (error) throw error;
 
-      const newSettings = { ...settings, [key]: value };
-      setSettings(newSettings);
-      
-      // Update cache
-      try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          data: newSettings,
-          timestamp: Date.now()
-        }));
-      } catch (e) {
-        console.error('Error updating cached settings:', e);
-      }
-      
+      setSettings(prev => ({ ...prev, [key]: value }));
       return true;
     } catch (error) {
       console.error('Error updating setting:', error);
