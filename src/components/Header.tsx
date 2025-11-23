@@ -9,16 +9,26 @@ const Header = memo(({ currentThread = "#0000" }: HeaderProps) => {
 
   useEffect(() => {
     let ticking = false;
+    let lastScrollTop = 0;
+    let lastProgress = 0;
 
     const updateScrollProgress = () => {
       const doc = document.documentElement;
       const scrollTop = doc.scrollTop || document.body.scrollTop;
       const scrollHeight = doc.scrollHeight - doc.clientHeight;
-      const progress = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+      let progress = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+
+      // Prevent slight backwards movement while user is scrolling down
+      if (scrollTop >= lastScrollTop) {
+        progress = Math.max(progress, lastProgress);
+      }
 
       if (progressBarRef.current) {
         progressBarRef.current.style.width = `${progress}%`;
       }
+
+      lastScrollTop = scrollTop;
+      lastProgress = progress;
       ticking = false;
     };
 
