@@ -41,6 +41,27 @@ export type Database = {
         }
         Relationships: []
       }
+      page_views: {
+        Row: {
+          created_at: string
+          id: string
+          referrer: string | null
+          visited_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          referrer?: string | null
+          visited_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          referrer?: string | null
+          visited_at?: string
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           id: string

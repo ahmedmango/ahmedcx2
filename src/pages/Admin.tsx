@@ -34,6 +34,8 @@ const Admin = () => {
   const [newTitle, setNewTitle] = useState("");
   const [loading, setLoading] = useState(false);
   const { settings, updateSetting, loadSettings } = useSettings();
+  const [totalViews, setTotalViews] = useState(0);
+  const [recentViews, setRecentViews] = useState<Array<{ visited_at: string; referrer: string | null }>>([]);
 
   useEffect(() => {
     const validateStoredKey = async () => {
@@ -81,8 +83,33 @@ const Admin = () => {
     if (isAuthenticated) {
       loadEpigrams();
       loadSettings();
+      loadViewStats();
     }
   }, [isAuthenticated]);
+
+  const loadViewStats = async () => {
+    try {
+      // Get total count
+      const { count, error: countError } = await supabase
+        .from('page_views')
+        .select('*', { count: 'exact', head: true });
+
+      if (countError) throw countError;
+      setTotalViews(count || 0);
+
+      // Get recent 10 views
+      const { data: recentData, error: recentError } = await supabase
+        .from('page_views')
+        .select('visited_at, referrer')
+        .order('visited_at', { ascending: false })
+        .limit(10);
+
+      if (recentError) throw recentError;
+      setRecentViews(recentData || []);
+    } catch (error) {
+      console.error('Error loading view stats:', error);
+    }
+  };
 
   const handleLogin = async () => {
     if (!writeKey.trim()) {
@@ -380,6 +407,38 @@ const Admin = () => {
             </Button>
           </div>
         </div>
+
+        {/* View Statistics */}
+        <Card className="p-6 mb-8 border-accent/20">
+          <h2 className="text-xl font-semibold mb-4">View Statistics</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Total Page Views</p>
+              <p className="text-4xl font-bold">{totalViews.toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground mb-3">Recent Visitors</p>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {recentViews.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No visits yet</p>
+                ) : (
+                  recentViews.map((view, idx) => (
+                    <div key={idx} className="flex justify-between items-start text-xs p-2 bg-muted/30 rounded">
+                      <div className="flex-1">
+                        <p className="font-medium">{new Date(view.visited_at).toLocaleString()}</p>
+                        {view.referrer && (
+                          <p className="text-muted-foreground truncate mt-0.5">
+                            from: {new URL(view.referrer).hostname}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </Card>
 
         {/* Color Customization */}
         <Card className="p-6 mb-8 border-accent/20">
