@@ -23,7 +23,20 @@ const Index = () => {
 
   useEffect(() => {
     loadEpigrams();
+    logPageView();
   }, []);
+
+  const logPageView = async () => {
+    try {
+      await supabase
+        .from('page_views')
+        .insert({
+          referrer: document.referrer || null,
+        });
+    } catch (error) {
+      console.error('Error logging page view:', error);
+    }
+  };
 
   useEffect(() => {
     if (epigrams.length === 0) return;
