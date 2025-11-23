@@ -23,19 +23,57 @@ const Index = () => {
 
   useEffect(() => {
     loadEpigrams();
-    logPageView();
+    return logScrollSession();
   }, []);
 
-  const logPageView = async () => {
-    try {
-      await supabase
-        .from('page_views')
-        .insert({
-          referrer: document.referrer || null,
-        });
-    } catch (error) {
-      console.error('Error logging page view:', error);
-    }
+  const logScrollSession = () => {
+    const sessionId = crypto.randomUUID();
+    const startTime = Date.now();
+    let maxThreadReached = 0;
+    let maxScrollDepth = 0;
+
+    const updateScrollData = () => {
+      const currentThread = parseInt(document.querySelector('article[data-id]')?.getAttribute('data-id') || '0');
+      maxThreadReached = Math.max(maxThreadReached, currentThread);
+      
+      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const scrolled = window.scrollY;
+      const scrollPercent = scrollHeight > 0 ? Math.round((scrolled / scrollHeight) * 100) : 0;
+      maxScrollDepth = Math.max(maxScrollDepth, scrollPercent);
+    };
+
+    const saveScrollData = async () => {
+      const sessionDuration = Math.round((Date.now() - startTime) / 1000);
+      
+      try {
+        await supabase
+          .from('scroll_tracking')
+          .insert({
+            referrer: document.referrer || null,
+            max_thread_reached: maxThreadReached,
+            scroll_depth_percentage: maxScrollDepth,
+            session_duration_seconds: sessionDuration,
+          });
+      } catch (error) {
+        console.error('Error logging scroll data:', error);
+      }
+    };
+
+    const handleScroll = () => updateScrollData();
+    const handleUnload = () => saveScrollData();
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('beforeunload', handleUnload);
+
+    // Save data every 30 seconds as backup
+    const interval = setInterval(saveScrollData, 30000);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('beforeunload', handleUnload);
+      clearInterval(interval);
+      saveScrollData();
+    };
   };
 
   useEffect(() => {

@@ -41,23 +41,32 @@ export type Database = {
         }
         Relationships: []
       }
-      page_views: {
+      scroll_tracking: {
         Row: {
           created_at: string
           id: string
+          max_thread_reached: number | null
           referrer: string | null
+          scroll_depth_percentage: number | null
+          session_duration_seconds: number | null
           visited_at: string
         }
         Insert: {
           created_at?: string
           id?: string
+          max_thread_reached?: number | null
           referrer?: string | null
+          scroll_depth_percentage?: number | null
+          session_duration_seconds?: number | null
           visited_at?: string
         }
         Update: {
           created_at?: string
           id?: string
+          max_thread_reached?: number | null
           referrer?: string | null
+          scroll_depth_percentage?: number | null
+          session_duration_seconds?: number | null
           visited_at?: string
         }
         Relationships: []
