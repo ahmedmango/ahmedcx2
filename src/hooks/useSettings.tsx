@@ -6,6 +6,7 @@ interface Settings {
   thread_number_color: string;
   progress_bar_color: string;
   body_text_color: string;
+  loading_bar_color: string;
 }
 
 export const useSettings = () => {
@@ -13,7 +14,8 @@ export const useSettings = () => {
     header_text_color: '0 0% 45%',
     thread_number_color: '5 100% 66%',
     progress_bar_color: '5 100% 66%',
-    body_text_color: '0 0% 15%'
+    body_text_color: '0 0% 15%',
+    loading_bar_color: '5 100% 66%'
   });
   const [loading, setLoading] = useState(true);
 

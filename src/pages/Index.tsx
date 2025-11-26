@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import EpigramBlock from "@/components/EpigramBlock";
+import LoadingBar from "@/components/LoadingBar";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,7 +20,19 @@ const Index = () => {
   const [epigrams, setEpigrams] = useState<Epigram[]>([]);
   const [currentThread, setCurrentThread] = useState("#0000");
   const [loading, setLoading] = useState(true);
+  const [fontScale, setFontScale] = useState(() => {
+    const saved = localStorage.getItem('ahmed_font_scale');
+    return saved ? parseFloat(saved) : 1;
+  });
   const { settings, loading: settingsLoading } = useSettings();
+
+  const handleTextSizeChange = (delta: number) => {
+    setFontScale(prev => {
+      const newScale = Math.max(0.6, Math.min(2, prev + delta));
+      localStorage.setItem('ahmed_font_scale', newScale.toString());
+      return newScale;
+    });
+  };
 
   useEffect(() => {
     loadEpigrams();
@@ -90,11 +103,7 @@ const Index = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-muted-foreground">Loading...</div>
-      </div>
-    );
+    return <LoadingBar color={settings.loading_bar_color} />;
   }
 
   return (
@@ -107,7 +116,7 @@ const Index = () => {
         '--body-text': `hsl(${settings.body_text_color})`,
       } as React.CSSProperties}
     >
-      <Header currentThread={currentThread} />
+      <Header currentThread={currentThread} onTextSizeChange={handleTextSizeChange} />
 
       {epigrams.length === 0 ? (
         <div className="h-screen flex items-center justify-center px-6">
@@ -125,6 +134,7 @@ const Index = () => {
             text={epigram.text}
             title={epigram.title}
             index={index + 1}
+            fontScale={fontScale}
           />
         ))
       )}

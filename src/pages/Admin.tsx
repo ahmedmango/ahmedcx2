@@ -467,6 +467,26 @@ const Admin = () => {
                 />
               </div>
             </div>
+
+            <div className="space-y-3">
+              <label className="text-sm font-medium block">
+                Loading Bar Color
+              </label>
+              <div className="flex gap-3 items-center">
+                <input
+                  type="color"
+                  value={hslToHex(settings.loading_bar_color)}
+                  onChange={(e) => updateSetting('loading_bar_color', hexToHSL(e.target.value))}
+                  className="w-20 h-12 rounded border-2 border-border cursor-pointer"
+                />
+                <Input
+                  value={settings.loading_bar_color}
+                  onChange={(e) => updateSetting('loading_bar_color', e.target.value)}
+                  placeholder="5 100% 66%"
+                  className="font-mono text-sm flex-1"
+                />
+              </div>
+            </div>
           </div>
           <div className="mt-6 p-4 bg-muted/30 rounded-lg">
             <p className="text-xs text-muted-foreground mb-2">Preview:</p>
@@ -486,6 +506,10 @@ const Admin = () => {
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded border-2" style={{ backgroundColor: `hsl(${settings.body_text_color})` }} />
                 <span className="text-xs">Body Text</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded border-2" style={{ backgroundColor: `hsl(${settings.loading_bar_color})` }} />
+                <span className="text-xs">Loading Bar</span>
               </div>
             </div>
           </div>

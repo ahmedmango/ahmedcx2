@@ -1,10 +1,13 @@
 import { useEffect, useRef } from "react";
+import { Minus, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface HeaderProps {
   currentThread?: string;
+  onTextSizeChange?: (delta: number) => void;
 }
 
-const Header = ({ currentThread = "#0000" }: HeaderProps) => {
+const Header = ({ currentThread = "#0000", onTextSizeChange }: HeaderProps) => {
   const progressBarRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -50,6 +53,29 @@ const Header = ({ currentThread = "#0000" }: HeaderProps) => {
               {currentThread}
             </div>
           </div>
+          
+          {onTextSizeChange && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => onTextSizeChange(-0.1)}
+                aria-label="Decrease text size"
+              >
+                <Minus className="h-4 w-4" style={{ color: 'var(--header-text)' }} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => onTextSizeChange(0.1)}
+                aria-label="Increase text size"
+              >
+                <Plus className="h-4 w-4" style={{ color: 'var(--header-text)' }} />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
       
