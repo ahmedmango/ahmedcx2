@@ -143,9 +143,9 @@ serve(async (req) => {
         );
       }
 
-      if (!epigram || !epigram.text) {
+      if (!epigram || (!epigram.text && !epigram.image_url)) {
         return new Response(
-          JSON.stringify({ error: 'Missing epigram text' }),
+          JSON.stringify({ error: 'Missing epigram text or image' }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 400 
@@ -158,9 +158,10 @@ serve(async (req) => {
       if (epigram.id) {
         console.log(`Updating epigram ${epigram.id}`);
         const updateData: any = {
-          text: epigram.text,
+          text: epigram.text || '',
           thread_id: epigram.thread_id || 'default',
-          title: epigram.title || null
+          title: epigram.title || null,
+          image_url: epigram.image_url || null
         };
         
         // Only update display_order if explicitly provided
@@ -189,9 +190,10 @@ serve(async (req) => {
         result = await supabase
           .from('epigrams')
           .insert({
-            text: epigram.text,
+            text: epigram.text || '',
             thread_id: epigram.thread_id || 'default',
             title: epigram.title || null,
+            image_url: epigram.image_url || null,
             display_order: nextDisplayOrder
           })
           .select()

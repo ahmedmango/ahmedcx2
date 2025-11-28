@@ -3,9 +3,10 @@ interface EpigramBlockProps {
   index: number;
   title?: string;
   fontScale?: number;
+  imageUrl?: string;
 }
 
-const EpigramBlock = ({ text, index, title, fontScale = 1 }: EpigramBlockProps) => {
+const EpigramBlock = ({ text, index, title, fontScale = 1, imageUrl }: EpigramBlockProps) => {
   return (
     <article 
       className="py-16 md:py-20 px-6 md:px-12"
@@ -23,16 +24,27 @@ const EpigramBlock = ({ text, index, title, fontScale = 1 }: EpigramBlockProps) 
             {title}
           </h2>
         )}
-        <p 
-          className="text-xl md:text-2xl lg:text-3xl leading-relaxed md:leading-relaxed lg:leading-loose whitespace-pre-wrap"
-          style={{ 
-            color: 'var(--body-text)',
-            fontSize: `calc(1.5rem * ${fontScale})`,
-            lineHeight: `calc(2.25rem * ${fontScale})`
-          }}
-        >
-          {text}
-        </p>
+        {imageUrl ? (
+          <div className="flex justify-center">
+            <img 
+              src={imageUrl} 
+              alt={title || 'Epigram image'}
+              className="max-w-full h-auto rounded-lg"
+              style={{ maxWidth: '600px' }}
+            />
+          </div>
+        ) : (
+          <p 
+            className="text-xl md:text-2xl lg:text-3xl leading-relaxed md:leading-relaxed lg:leading-loose whitespace-pre-wrap"
+            style={{ 
+              color: 'var(--body-text)',
+              fontSize: `calc(1.5rem * ${fontScale})`,
+              lineHeight: `calc(2.25rem * ${fontScale})`
+            }}
+          >
+            {text}
+          </p>
+        )}
       </div>
     </article>
   );
