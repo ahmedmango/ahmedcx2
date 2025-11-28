@@ -11,6 +11,7 @@ import { hexToHSL, hslToHex } from "@/lib/colorUtils";
 import { DndContext, DragEndEvent, closestCenter } from "@dnd-kit/core";
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { SortableEpigramCard } from "@/components/SortableEpigramCard";
+import ImageComposer from "@/components/ImageComposer";
 
 interface Epigram {
   id?: number;
@@ -18,6 +19,7 @@ interface Epigram {
   thread_id: string;
   created_at?: string;
   title?: string;
+  image_url?: string;
 }
 
 const Admin = () => {
@@ -32,6 +34,7 @@ const Admin = () => {
   const [newText, setNewText] = useState("");
   const [newThreadId, setNewThreadId] = useState("default");
   const [newTitle, setNewTitle] = useState("");
+  const [newImageUrl, setNewImageUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const { settings, updateSetting, loadSettings } = useSettings();
 
@@ -150,8 +153,8 @@ const Admin = () => {
   };
 
   const handleSaveNew = async () => {
-    if (!newText.trim()) {
-      toast.error("Text cannot be empty");
+    if (!newText.trim() && !newImageUrl) {
+      toast.error("Please provide either text or an image");
       return;
     }
 
@@ -167,9 +170,10 @@ const Admin = () => {
           body: JSON.stringify({
             write_key: writeKey,
             epigram: {
-              text: newText,
+              text: newText || '',
               thread_id: newThreadId,
-              title: newTitle || null
+              title: newTitle || null,
+              image_url: newImageUrl || null
             }
           })
         }
@@ -184,6 +188,7 @@ const Admin = () => {
       setNewText("");
       setNewThreadId("default");
       setNewTitle("");
+      setNewImageUrl("");
       await loadEpigrams();
     } catch (error) {
       console.error('Error creating epigram:', error);
@@ -558,6 +563,12 @@ const Admin = () => {
             </Button>
           </div>
         </Card>
+
+        {/* Image Composer */}
+        <ImageComposer onImageCreated={(url) => {
+          setNewImageUrl(url);
+          toast.success("Image ready! Fill in details and click Create Epigram");
+        }} />
 
         {/* Existing Epigrams */}
         <div className="space-y-4">

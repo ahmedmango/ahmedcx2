@@ -13,6 +13,7 @@ interface Epigram {
   thread_id: string;
   created_at: string;
   title?: string;
+  image_url?: string;
 }
 
 const Index = () => {
@@ -135,6 +136,7 @@ const Index = () => {
             title={epigram.title}
             index={index + 1}
             fontScale={fontScale}
+            imageUrl={epigram.image_url}
           />
         ))
       )}
