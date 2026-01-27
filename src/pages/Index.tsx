@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import EpigramBlock from "@/components/EpigramBlock";
 import LoadingBar from "@/components/LoadingBar";
+import SecretBrainMode from "@/components/SecretBrainMode";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSettings } from "@/hooks/useSettings";
+import { useDeviceOrientation } from "@/hooks/useDeviceOrientation";
 
 interface Epigram {
   id: number;
@@ -26,6 +28,7 @@ const Index = () => {
     return saved ? parseFloat(saved) : 1;
   });
   const { settings, loading: settingsLoading } = useSettings();
+  const { isUpsideDown } = useDeviceOrientation(600);
 
   const handleTextSizeChange = (delta: number) => {
     setFontScale(prev => {
@@ -108,39 +111,41 @@ const Index = () => {
   }
 
   return (
-    <div 
-      className="relative min-h-screen pt-32"
-      style={{
-        '--header-text': `hsl(${settings.header_text_color})`,
-        '--thread-number': `hsl(${settings.thread_number_color})`,
-        '--progress-bar': `hsl(${settings.progress_bar_color})`,
-        '--body-text': `hsl(${settings.body_text_color})`,
-      } as React.CSSProperties}
-    >
-      <Header currentThread={currentThread} onTextSizeChange={handleTextSizeChange} />
+    <SecretBrainMode isActive={isUpsideDown}>
+      <div 
+        className="relative min-h-screen pt-32"
+        style={{
+          '--header-text': `hsl(${settings.header_text_color})`,
+          '--thread-number': `hsl(${settings.thread_number_color})`,
+          '--progress-bar': `hsl(${settings.progress_bar_color})`,
+          '--body-text': `hsl(${settings.body_text_color})`,
+        } as React.CSSProperties}
+      >
+        <Header currentThread={currentThread} onTextSizeChange={handleTextSizeChange} />
 
-      {epigrams.length === 0 ? (
-        <div className="h-screen flex items-center justify-center px-6">
-          <div className="text-center space-y-4">
-            <p className="text-xl text-muted-foreground">No epigrams yet.</p>
-            <Button onClick={() => navigate("/admin")}>
-              Go to Admin
-            </Button>
+        {epigrams.length === 0 ? (
+          <div className="h-screen flex items-center justify-center px-6">
+            <div className="text-center space-y-4">
+              <p className="text-xl text-muted-foreground">No epigrams yet.</p>
+              <Button onClick={() => navigate("/admin")}>
+                Go to Admin
+              </Button>
+            </div>
           </div>
-        </div>
-      ) : (
-        epigrams.map((epigram, index) => (
-          <EpigramBlock
-            key={epigram.id}
-            text={epigram.text}
-            title={epigram.title}
-            index={index + 1}
-            fontScale={fontScale}
-            imageUrl={epigram.image_url}
-          />
-        ))
-      )}
-    </div>
+        ) : (
+          epigrams.map((epigram, index) => (
+            <EpigramBlock
+              key={epigram.id}
+              text={epigram.text}
+              title={epigram.title}
+              index={index + 1}
+              fontScale={fontScale}
+              imageUrl={epigram.image_url}
+            />
+          ))
+        )}
+      </div>
+    </SecretBrainMode>
   );
 };
 
