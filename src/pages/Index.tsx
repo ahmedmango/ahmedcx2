@@ -18,6 +18,13 @@ interface Epigram {
   image_url?: string;
 }
 
+interface SecretEpigram {
+  id: number;
+  text: string;
+  title?: string;
+  display_order: number;
+}
+
 const Index = () => {
   const navigate = useNavigate();
   const [epigrams, setEpigrams] = useState<Epigram[]>([]);
@@ -27,9 +34,9 @@ const Index = () => {
     const saved = localStorage.getItem('ahmed_font_scale');
     return saved ? parseFloat(saved) : 1;
   });
-  const [secretContent, setSecretContent] = useState("");
+  const [secretEpigrams, setSecretEpigrams] = useState<SecretEpigram[]>([]);
   const { settings, loading: settingsLoading } = useSettings();
-  const { isActivated } = useDeviceOrientation(2000);
+  const { isActivated, isSupported, hasPermission, requestPermission } = useDeviceOrientation(2000);
 
   const handleTextSizeChange = (delta: number) => {
     setFontScale(prev => {
@@ -41,7 +48,7 @@ const Index = () => {
 
   useEffect(() => {
     loadEpigrams();
-    loadSecretContent();
+    loadSecretEpigrams();
   }, []);
 
   useEffect(() => {
@@ -108,19 +115,17 @@ const Index = () => {
     }
   };
 
-  const loadSecretContent = async () => {
+  const loadSecretEpigrams = async () => {
     try {
       const { data, error } = await supabase
-        .from('secret_thread')
-        .select('content')
-        .maybeSingle();
+        .from('secret_epigrams')
+        .select('*')
+        .order('display_order', { ascending: true });
 
       if (error) throw error;
-      if (data) {
-        setSecretContent(data.content);
-      }
+      setSecretEpigrams(data || []);
     } catch (error) {
-      console.error('Error loading secret content:', error);
+      console.error('Error loading secret epigrams:', error);
     }
   };
 
@@ -129,7 +134,7 @@ const Index = () => {
   }
 
   return (
-    <SecretBrainMode isActivated={isActivated} secretContent={secretContent}>
+    <SecretBrainMode isActivated={isActivated} secretEpigrams={secretEpigrams}>
       <div 
         className="relative min-h-screen pt-32"
         style={{
