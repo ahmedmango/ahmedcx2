@@ -27,8 +27,9 @@ const Index = () => {
     const saved = localStorage.getItem('ahmed_font_scale');
     return saved ? parseFloat(saved) : 1;
   });
+  const [secretContent, setSecretContent] = useState("");
   const { settings, loading: settingsLoading } = useSettings();
-  const { isUpsideDown } = useDeviceOrientation(600);
+  const { isActivated } = useDeviceOrientation(2000);
 
   const handleTextSizeChange = (delta: number) => {
     setFontScale(prev => {
@@ -40,6 +41,7 @@ const Index = () => {
 
   useEffect(() => {
     loadEpigrams();
+    loadSecretContent();
   }, []);
 
   useEffect(() => {
@@ -106,12 +108,28 @@ const Index = () => {
     }
   };
 
+  const loadSecretContent = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('secret_thread')
+        .select('content')
+        .maybeSingle();
+
+      if (error) throw error;
+      if (data) {
+        setSecretContent(data.content);
+      }
+    } catch (error) {
+      console.error('Error loading secret content:', error);
+    }
+  };
+
   if (loading) {
     return <LoadingBar color={settings.loading_bar_color} />;
   }
 
   return (
-    <SecretBrainMode isActive={isUpsideDown}>
+    <SecretBrainMode isActivated={isActivated} secretContent={secretContent}>
       <div 
         className="relative min-h-screen pt-32"
         style={{

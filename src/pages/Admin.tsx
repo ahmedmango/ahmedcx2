@@ -22,6 +22,12 @@ interface Epigram {
   image_url?: string;
 }
 
+interface SecretThread {
+  id: string;
+  content: string;
+  updated_at: string;
+}
+
 const Admin = () => {
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -36,6 +42,8 @@ const Admin = () => {
   const [newTitle, setNewTitle] = useState("");
   const [newImageUrl, setNewImageUrl] = useState("");
   const [loading, setLoading] = useState(false);
+  const [secretThreadContent, setSecretThreadContent] = useState("");
+  const [secretThreadPreview, setSecretThreadPreview] = useState(false);
   const { settings, updateSetting, loadSettings } = useSettings();
 
   useEffect(() => {
@@ -84,8 +92,43 @@ const Admin = () => {
     if (isAuthenticated) {
       loadEpigrams();
       loadSettings();
+      loadSecretThread();
     }
   }, [isAuthenticated]);
+
+  const loadSecretThread = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('secret_thread')
+        .select('*')
+        .maybeSingle();
+
+      if (error) throw error;
+      if (data) {
+        setSecretThreadContent(data.content);
+      }
+    } catch (error) {
+      console.error('Error loading secret thread:', error);
+    }
+  };
+
+  const handleSaveSecretThread = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('secret_thread')
+        .update({ content: secretThreadContent, updated_at: new Date().toISOString() })
+        .not('id', 'is', null);
+
+      if (error) throw error;
+      toast.success("Secret thread saved");
+    } catch (error) {
+      console.error('Error saving secret thread:', error);
+      toast.error("Failed to save secret thread");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     if (!writeKey.trim()) {
@@ -569,6 +612,62 @@ const Admin = () => {
           setNewImageUrl(url);
           toast.success("Image ready! Fill in details and click Create Epigram");
         }} />
+
+        {/* Secret Thread Editor */}
+        <Card className="p-6 mb-8 border-orange-500/30 bg-black/5">
+          <h2 className="text-xl font-semibold mb-2">Secret Thread</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Hidden content revealed when users flip their phone upside down for 2 seconds (mobile only)
+          </p>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block text-muted-foreground">
+                Content <span className="text-xs">(HTML supported)</span>
+              </label>
+              <Textarea
+                placeholder="Enter secret content... HTML tags like <p>, <br>, <em> are supported"
+                value={secretThreadContent}
+                onChange={(e) => setSecretThreadContent(e.target.value)}
+                rows={8}
+                className="font-mono text-sm resize-none"
+              />
+            </div>
+            
+            <div className="flex gap-2 flex-wrap">
+              <Button 
+                onClick={handleSaveSecretThread} 
+                disabled={loading}
+                className="bg-orange-600 hover:bg-orange-700"
+              >
+                {loading ? "Saving..." : "Save Secret Thread"}
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => setSecretThreadPreview(!secretThreadPreview)}
+              >
+                {secretThreadPreview ? "Hide Preview" : "Show Preview"}
+              </Button>
+            </div>
+
+            {/* Preview */}
+            {secretThreadPreview && (
+              <div 
+                className="mt-4 p-6 rounded-lg min-h-[200px]"
+                style={{
+                  background: '#000000',
+                  color: '#FF7A00',
+                  fontFamily: '"Courier New", Courier, monospace',
+                  lineHeight: 1.7,
+                  textShadow: '0 0 12px rgba(255, 122, 0, 0.25)',
+                }}
+              >
+                <p className="text-xs opacity-50 mb-4">Preview (as it appears in secret mode):</p>
+                <div dangerouslySetInnerHTML={{ __html: secretThreadContent }} />
+              </div>
+            )}
+          </div>
+        </Card>
 
         {/* Existing Epigrams */}
         <div className="space-y-4">
