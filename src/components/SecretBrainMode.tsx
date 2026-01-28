@@ -1,169 +1,112 @@
 import { useEffect, useState } from 'react';
 
 interface SecretBrainModeProps {
-  isActive: boolean;
+  isActivated: boolean;
+  secretContent: string;
   children: React.ReactNode;
 }
 
-const SecretBrainMode = ({ isActive, children }: SecretBrainModeProps) => {
-  const [phase, setPhase] = useState<'normal' | 'falling' | 'transitioning' | 'secret'>('normal');
-  const [showContent, setShowContent] = useState(true);
+const SecretBrainMode = ({ isActivated, secretContent, children }: SecretBrainModeProps) => {
+  const [phase, setPhase] = useState<'normal' | 'falling' | 'revealed'>('normal');
 
   useEffect(() => {
-    if (isActive && phase === 'normal') {
+    if (isActivated && phase === 'normal') {
       // Start falling animation
       setPhase('falling');
       
-      // After falling completes, start transition
-      const transitionTimer = setTimeout(() => {
-        setShowContent(false);
-        setPhase('transitioning');
-        
-        // After transition, enter secret mode
-        const secretTimer = setTimeout(() => {
-          setPhase('secret');
-          setShowContent(true);
-        }, 600);
-        
-        return () => clearTimeout(secretTimer);
-      }, 1000);
+      // After fall completes, reveal dark thread
+      const revealTimer = setTimeout(() => {
+        setPhase('revealed');
+      }, 1800);
       
-      return () => clearTimeout(transitionTimer);
-    } else if (!isActive && phase !== 'normal') {
-      // Exit secret mode - fade out and reset
-      setPhase('transitioning');
-      setShowContent(false);
-      
-      const resetTimer = setTimeout(() => {
-        setPhase('normal');
-        setShowContent(true);
-      }, 500);
-      
-      return () => clearTimeout(resetTimer);
+      return () => clearTimeout(revealTimer);
     }
-  }, [isActive, phase]);
+  }, [isActivated, phase]);
 
   return (
     <>
-      {/* Secret brain mode background overlay */}
-      <div 
-        className={`fixed inset-0 z-40 pointer-events-none transition-opacity duration-700 ${
-          phase === 'secret' || phase === 'transitioning' ? 'opacity-100' : 'opacity-0'
+      {/* Dark thread layer (underneath) */}
+      <section 
+        className={`fixed inset-0 z-40 overflow-y-auto transition-all duration-1000 ease-out ${
+          phase === 'revealed' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
         }`}
         style={{
-          background: phase === 'secret' ? '#000000' : 'transparent',
+          background: '#000000',
         }}
       >
-        {/* Subtle animated background for secret mode */}
-        {phase === 'secret' && (
-          <>
-            {/* Slow pulsing gradient */}
+        {/* Noise overlay */}
+        <div 
+          className="fixed inset-0 pointer-events-none opacity-[0.03] z-50"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          }}
+        />
+        
+        {/* Vignette */}
+        <div 
+          className="fixed inset-0 pointer-events-none z-50"
+          style={{
+            background: 'radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.4) 100%)',
+          }}
+        />
+        
+        {/* Slow parallax drift background */}
+        <div 
+          className="fixed inset-0 pointer-events-none opacity-[0.08] z-40"
+          style={{
+            background: 'linear-gradient(180deg, transparent 0%, #FF7A00 50%, transparent 100%)',
+            backgroundSize: '100% 200%',
+            animation: 'parallaxDrift 8s ease-in-out infinite',
+          }}
+        />
+        
+        {/* Content */}
+        <div 
+          className="relative z-60 min-h-screen flex items-center justify-center px-5 py-12"
+        >
+          <div 
+            className="max-w-[680px] w-full"
+            style={{
+              color: '#FF7A00',
+              fontFamily: '"Courier New", Courier, monospace',
+              lineHeight: 1.7,
+              textShadow: '0 0 12px rgba(255, 122, 0, 0.25)',
+            }}
+          >
             <div 
-              className="absolute inset-0 animate-pulse"
-              style={{
-                background: 'radial-gradient(ellipse at center, rgba(255, 122, 24, 0.03) 0%, transparent 70%)',
-                animationDuration: '4s',
-              }}
+              className="text-lg whitespace-pre-wrap"
+              dangerouslySetInnerHTML={{ __html: secretContent }}
             />
-            {/* Subtle noise texture */}
-            <div 
-              className="absolute inset-0 opacity-[0.02]"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-              }}
-            />
-            {/* Organic neural curves */}
-            <svg 
-              className="absolute inset-0 w-full h-full opacity-[0.04]"
-              viewBox="0 0 100 100"
-              preserveAspectRatio="none"
-            >
-              <path
-                d="M0,50 Q25,30 50,50 T100,50"
-                fill="none"
-                stroke="#ff7a18"
-                strokeWidth="0.2"
-                className="animate-[neuralPulse_8s_ease-in-out_infinite]"
-              />
-              <path
-                d="M0,30 Q35,50 50,30 T100,30"
-                fill="none"
-                stroke="#ff7a18"
-                strokeWidth="0.15"
-                className="animate-[neuralPulse_10s_ease-in-out_infinite_reverse]"
-              />
-              <path
-                d="M0,70 Q30,90 50,70 T100,70"
-                fill="none"
-                stroke="#ff7a18"
-                strokeWidth="0.15"
-                className="animate-[neuralPulse_12s_ease-in-out_infinite]"
-              />
-            </svg>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      </section>
 
-      {/* Content wrapper */}
+      {/* Public content (falls away) */}
       <div 
-        className={`relative z-50 transition-opacity duration-500 ${
-          showContent ? 'opacity-100' : 'opacity-0'
+        className={`relative z-50 transition-all ease-in ${
+          phase === 'falling' || phase === 'revealed' ? 'fall-away' : ''
         }`}
         style={{
-          // Apply falling animation to content
-          ...(phase === 'falling' ? {
-            animation: 'contentFall 1s ease-in forwards',
-          } : {}),
-          // Apply secret mode styling
-          ...(phase === 'secret' ? {
-            '--body-text': '#ff7a18',
-            '--header-text': '#ff7a18',
-            '--thread-number': '#ff7a18',
-            '--progress-bar': '#ff7a18',
-          } as React.CSSProperties : {}),
+          transitionDuration: '1.8s',
+          transitionTimingFunction: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
         }}
       >
         {children}
       </div>
 
-      {/* Inline styles for animations */}
+      {/* Keyframe animations */}
       <style>{`
-        @keyframes contentFall {
-          0% {
-            transform: translateY(0) rotate(0deg);
-            opacity: 1;
-          }
-          100% {
-            transform: translateY(120vh) rotate(3deg);
-            opacity: 0;
-          }
+        .fall-away {
+          transform: translateY(120vh) rotateX(25deg);
+          opacity: 0;
         }
 
-        @keyframes neuralPulse {
+        @keyframes parallaxDrift {
           0%, 100% {
-            opacity: 0.04;
             transform: translateY(0);
           }
           50% {
-            opacity: 0.08;
-            transform: translateY(2px);
-          }
-        }
-
-        /* Individual falling elements with variation */
-        .falling-text {
-          animation: textFall var(--fall-duration, 1s) ease-in forwards;
-          animation-delay: var(--fall-delay, 0s);
-        }
-
-        @keyframes textFall {
-          0% {
-            transform: translateY(0) translateX(0) rotate(0deg);
-            opacity: 1;
-          }
-          100% {
-            transform: translateY(120vh) translateX(var(--drift-x, 0px)) rotate(var(--drift-rotate, 0deg));
-            opacity: 0;
+            transform: translateY(-20px);
           }
         }
       `}</style>
