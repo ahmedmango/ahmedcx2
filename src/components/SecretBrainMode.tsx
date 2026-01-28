@@ -1,12 +1,19 @@
 import { useEffect, useState } from 'react';
 
+interface SecretEpigram {
+  id: number;
+  text: string;
+  title?: string;
+  display_order: number;
+}
+
 interface SecretBrainModeProps {
   isActivated: boolean;
-  secretContent: string;
+  secretEpigrams: SecretEpigram[];
   children: React.ReactNode;
 }
 
-const SecretBrainMode = ({ isActivated, secretContent, children }: SecretBrainModeProps) => {
+const SecretBrainMode = ({ isActivated, secretEpigrams, children }: SecretBrainModeProps) => {
   const [phase, setPhase] = useState<'normal' | 'falling' | 'revealed'>('normal');
 
   useEffect(() => {
@@ -62,10 +69,10 @@ const SecretBrainMode = ({ isActivated, secretContent, children }: SecretBrainMo
         
         {/* Content */}
         <div 
-          className="relative z-60 min-h-screen flex items-center justify-center px-5 py-12"
+          className="relative z-60 min-h-screen px-5 py-24"
         >
           <div 
-            className="max-w-[680px] w-full"
+            className="max-w-[680px] mx-auto w-full space-y-24"
             style={{
               color: '#FF7A00',
               fontFamily: '"Courier New", Courier, monospace',
@@ -73,10 +80,24 @@ const SecretBrainMode = ({ isActivated, secretContent, children }: SecretBrainMo
               textShadow: '0 0 12px rgba(255, 122, 0, 0.25)',
             }}
           >
-            <div 
-              className="text-lg whitespace-pre-wrap"
-              dangerouslySetInnerHTML={{ __html: secretContent }}
-            />
+            {secretEpigrams.length === 0 ? (
+              <p className="text-lg opacity-50 text-center">No secret threads yet...</p>
+            ) : (
+              secretEpigrams.map((epigram, index) => (
+                <article key={epigram.id} className="space-y-4">
+                  <div className="text-xs opacity-40 font-mono">
+                    #{String(index + 1).padStart(4, '0')}
+                  </div>
+                  {epigram.title && (
+                    <h2 className="text-2xl font-bold">{epigram.title}</h2>
+                  )}
+                  <div 
+                    className="text-lg whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: epigram.text }}
+                  />
+                </article>
+              ))
+            )}
           </div>
         </div>
       </section>

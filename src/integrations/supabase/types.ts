@@ -74,6 +74,30 @@ export type Database = {
         }
         Relationships: []
       }
+      secret_epigrams: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: number
+          text: string
+          title: string | null
+        }
+        Insert: {
+          created_at?: string
+          display_order: number
+          id?: number
+          text: string
+          title?: string | null
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: number
+          text?: string
+          title?: string | null
+        }
+        Relationships: []
+      }
       secret_thread: {
         Row: {
           content: string

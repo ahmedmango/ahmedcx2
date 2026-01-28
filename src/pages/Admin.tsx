@@ -22,10 +22,12 @@ interface Epigram {
   image_url?: string;
 }
 
-interface SecretThread {
-  id: string;
-  content: string;
-  updated_at: string;
+interface SecretEpigram {
+  id?: number;
+  text: string;
+  title?: string;
+  display_order: number;
+  created_at?: string;
 }
 
 const Admin = () => {
@@ -42,8 +44,16 @@ const Admin = () => {
   const [newTitle, setNewTitle] = useState("");
   const [newImageUrl, setNewImageUrl] = useState("");
   const [loading, setLoading] = useState(false);
-  const [secretThreadContent, setSecretThreadContent] = useState("");
-  const [secretThreadPreview, setSecretThreadPreview] = useState(false);
+  
+  // Secret epigrams state
+  const [secretEpigrams, setSecretEpigrams] = useState<SecretEpigram[]>([]);
+  const [newSecretText, setNewSecretText] = useState("");
+  const [newSecretTitle, setNewSecretTitle] = useState("");
+  const [editingSecretId, setEditingSecretId] = useState<number | null>(null);
+  const [editSecretText, setEditSecretText] = useState("");
+  const [editSecretTitle, setEditSecretTitle] = useState("");
+  const [secretPreview, setSecretPreview] = useState(false);
+  
   const { settings, updateSetting, loadSettings } = useSettings();
 
   useEffect(() => {
@@ -92,39 +102,111 @@ const Admin = () => {
     if (isAuthenticated) {
       loadEpigrams();
       loadSettings();
-      loadSecretThread();
+      loadSecretEpigrams();
     }
   }, [isAuthenticated]);
 
-  const loadSecretThread = async () => {
+  const loadSecretEpigrams = async () => {
     try {
       const { data, error } = await supabase
-        .from('secret_thread')
+        .from('secret_epigrams')
         .select('*')
-        .maybeSingle();
+        .order('display_order', { ascending: true });
 
       if (error) throw error;
-      if (data) {
-        setSecretThreadContent(data.content);
-      }
+      setSecretEpigrams(data || []);
     } catch (error) {
-      console.error('Error loading secret thread:', error);
+      console.error('Error loading secret epigrams:', error);
     }
   };
 
-  const handleSaveSecretThread = async () => {
+  const handleSaveNewSecret = async () => {
+    if (!newSecretText.trim()) {
+      toast.error("Please enter text for the secret epigram");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const maxOrder = secretEpigrams.length > 0 
+        ? Math.max(...secretEpigrams.map(e => e.display_order)) 
+        : 0;
+
+      const { error } = await supabase
+        .from('secret_epigrams')
+        .insert({
+          text: newSecretText,
+          title: newSecretTitle || null,
+          display_order: maxOrder + 1
+        });
+
+      if (error) throw error;
+      toast.success("Secret epigram created");
+      setNewSecretText("");
+      setNewSecretTitle("");
+      await loadSecretEpigrams();
+    } catch (error) {
+      console.error('Error creating secret epigram:', error);
+      toast.error("Failed to create secret epigram");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditSecret = (epigram: SecretEpigram) => {
+    setEditingSecretId(epigram.id || null);
+    setEditSecretText(epigram.text);
+    setEditSecretTitle(epigram.title || "");
+  };
+
+  const handleSaveSecretEdit = async () => {
+    if (!editSecretText.trim() || editingSecretId === null) {
+      toast.error("Text cannot be empty");
+      return;
+    }
+
     setLoading(true);
     try {
       const { error } = await supabase
-        .from('secret_thread')
-        .update({ content: secretThreadContent, updated_at: new Date().toISOString() })
-        .not('id', 'is', null);
+        .from('secret_epigrams')
+        .update({
+          text: editSecretText,
+          title: editSecretTitle || null
+        })
+        .eq('id', editingSecretId);
 
       if (error) throw error;
-      toast.success("Secret thread saved");
+      toast.success("Secret epigram updated");
+      setEditingSecretId(null);
+      setEditSecretText("");
+      setEditSecretTitle("");
+      await loadSecretEpigrams();
     } catch (error) {
-      console.error('Error saving secret thread:', error);
-      toast.error("Failed to save secret thread");
+      console.error('Error updating secret epigram:', error);
+      toast.error("Failed to update secret epigram");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteSecret = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this secret epigram?")) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('secret_epigrams')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success("Secret epigram deleted");
+      await loadSecretEpigrams();
+    } catch (error) {
+      console.error('Error deleting secret epigram:', error);
+      toast.error("Failed to delete secret epigram");
     } finally {
       setLoading(false);
     }
@@ -615,56 +697,140 @@ const Admin = () => {
 
         {/* Secret Thread Editor */}
         <Card className="p-6 mb-8 border-orange-500/30 bg-black/5">
-          <h2 className="text-xl font-semibold mb-2">Secret Thread</h2>
+          <h2 className="text-xl font-semibold mb-2">Secret Epigrams</h2>
           <p className="text-sm text-muted-foreground mb-4">
             Hidden content revealed when users flip their phone upside down for 2 seconds (mobile only)
           </p>
           
-          <div className="space-y-4">
+          {/* Create New Secret Epigram */}
+          <div className="space-y-4 mb-6 p-4 bg-muted/20 rounded-lg">
+            <h3 className="text-sm font-semibold">Create New Secret Epigram</h3>
             <div>
               <label className="text-sm font-medium mb-2 block text-muted-foreground">
-                Content <span className="text-xs">(HTML supported)</span>
+                Title <span className="text-xs">(Optional)</span>
+              </label>
+              <Input
+                placeholder="Optional title..."
+                value={newSecretTitle}
+                onChange={(e) => setNewSecretTitle(e.target.value)}
+                className="font-mono"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block text-muted-foreground">
+                Text <span className="text-xs">(HTML supported)</span>
               </label>
               <Textarea
                 placeholder="Enter secret content... HTML tags like <p>, <br>, <em> are supported"
-                value={secretThreadContent}
-                onChange={(e) => setSecretThreadContent(e.target.value)}
-                rows={8}
+                value={newSecretText}
+                onChange={(e) => setNewSecretText(e.target.value)}
+                rows={6}
                 className="font-mono text-sm resize-none"
               />
             </div>
-            
-            <div className="flex gap-2 flex-wrap">
-              <Button 
-                onClick={handleSaveSecretThread} 
-                disabled={loading}
-                className="bg-orange-600 hover:bg-orange-700"
-              >
-                {loading ? "Saving..." : "Save Secret Thread"}
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={() => setSecretThreadPreview(!secretThreadPreview)}
-              >
-                {secretThreadPreview ? "Hide Preview" : "Show Preview"}
-              </Button>
-            </div>
+            <Button 
+              onClick={handleSaveNewSecret} 
+              disabled={loading}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {loading ? "Creating..." : "Create Secret Epigram"}
+            </Button>
+          </div>
 
-            {/* Preview */}
-            {secretThreadPreview && (
-              <div 
-                className="mt-4 p-6 rounded-lg min-h-[200px]"
-                style={{
-                  background: '#000000',
-                  color: '#FF7A00',
-                  fontFamily: '"Courier New", Courier, monospace',
-                  lineHeight: 1.7,
-                  textShadow: '0 0 12px rgba(255, 122, 0, 0.25)',
-                }}
-              >
-                <p className="text-xs opacity-50 mb-4">Preview (as it appears in secret mode):</p>
-                <div dangerouslySetInnerHTML={{ __html: secretThreadContent }} />
+          {/* Preview Toggle */}
+          <div className="mb-4">
+            <Button 
+              variant="outline"
+              onClick={() => setSecretPreview(!secretPreview)}
+              size="sm"
+            >
+              {secretPreview ? "Hide Preview" : "Show Preview"}
+            </Button>
+          </div>
+
+          {/* Preview */}
+          {secretPreview && (
+            <div 
+              className="mb-6 p-6 rounded-lg min-h-[200px]"
+              style={{
+                background: '#000000',
+                color: '#FF7A00',
+                fontFamily: '"Courier New", Courier, monospace',
+                lineHeight: 1.7,
+                textShadow: '0 0 12px rgba(255, 122, 0, 0.25)',
+              }}
+            >
+              <p className="text-xs opacity-50 mb-4">Preview (as it appears in secret mode):</p>
+              <div className="space-y-8">
+                {secretEpigrams.map((ep, idx) => (
+                  <div key={ep.id}>
+                    <div className="text-xs opacity-40 mb-2">#{String(idx + 1).padStart(4, '0')}</div>
+                    {ep.title && <h3 className="text-xl font-bold mb-2">{ep.title}</h3>}
+                    <div dangerouslySetInnerHTML={{ __html: ep.text }} />
+                  </div>
+                ))}
               </div>
+            </div>
+          )}
+
+          {/* Existing Secret Epigrams */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold">All Secret Epigrams ({secretEpigrams.length})</h3>
+            {secretEpigrams.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No secret epigrams yet.</p>
+            ) : (
+              secretEpigrams.map((ep, index) => (
+                <div key={ep.id} className="p-4 border rounded-lg bg-background">
+                  {editingSecretId === ep.id ? (
+                    <div className="space-y-3">
+                      <Input
+                        value={editSecretTitle}
+                        onChange={(e) => setEditSecretTitle(e.target.value)}
+                        placeholder="Title (optional)"
+                        className="font-mono"
+                      />
+                      <Textarea
+                        value={editSecretText}
+                        onChange={(e) => setEditSecretText(e.target.value)}
+                        rows={4}
+                        className="font-mono text-sm resize-none"
+                      />
+                      <div className="flex gap-2">
+                        <Button onClick={handleSaveSecretEdit} disabled={loading} size="sm">
+                          Save
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => {
+                            setEditingSecretId(null);
+                            setEditSecretText("");
+                            setEditSecretTitle("");
+                          }}
+                          size="sm"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-xs text-muted-foreground">#{String(index + 1).padStart(4, '0')}</span>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => handleEditSecret(ep)}>
+                            Edit
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteSecret(ep.id!)}>
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                      {ep.title && <h4 className="font-semibold mb-1">{ep.title}</h4>}
+                      <p className="text-sm line-clamp-3">{ep.text.replace(/<[^>]*>/g, '')}</p>
+                    </div>
+                  )}
+                </div>
+              ))
             )}
           </div>
         </Card>
