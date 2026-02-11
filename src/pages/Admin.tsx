@@ -30,6 +30,8 @@ interface SecretEpigram {
   created_at?: string;
 }
 
+const edgeFunctionUrl = () => `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/epigrams`;
+
 const Admin = () => {
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -45,7 +47,6 @@ const Admin = () => {
   const [newImageUrl, setNewImageUrl] = useState("");
   const [loading, setLoading] = useState(false);
   
-  // Secret epigrams state
   const [secretEpigrams, setSecretEpigrams] = useState<SecretEpigram[]>([]);
   const [newSecretText, setNewSecretText] = useState("");
   const [newSecretTitle, setNewSecretTitle] = useState("");
@@ -56,28 +57,24 @@ const Admin = () => {
   
   const { settings, updateSetting, loadSettings } = useSettings();
 
+  const getWriteKey = () => sessionStorage.getItem("ahmed_write_key") || writeKey;
+
   useEffect(() => {
     const validateStoredKey = async () => {
       const storedKey = sessionStorage.getItem("ahmed_write_key");
       if (!storedKey) return;
 
       try {
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/epigrams`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              write_key: storedKey,
-              epigram: { text: '__test__', thread_id: 'test' }
-            })
-          }
-        );
+        const response = await fetch(edgeFunctionUrl(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            write_key: storedKey,
+            epigram: { text: '__test__', thread_id: 'test' }
+          })
+        });
 
         if (!response.ok) {
-          console.error('Stored write key is invalid, clearing session');
           sessionStorage.removeItem("ahmed_write_key");
           setWriteKey("");
           setIsAuthenticated(false);
@@ -106,6 +103,8 @@ const Admin = () => {
     }
   }, [isAuthenticated]);
 
+  // ========== SECRET EPIGRAMS (via edge function) ==========
+
   const loadSecretEpigrams = async () => {
     try {
       const { data, error } = await supabase
@@ -132,15 +131,23 @@ const Admin = () => {
         ? Math.max(...secretEpigrams.map(e => e.display_order)) 
         : 0;
 
-      const { error } = await supabase
-        .from('secret_epigrams')
-        .insert({
+      const response = await fetch(edgeFunctionUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          write_key: getWriteKey(),
+          action: 'create_secret',
           text: newSecretText,
           title: newSecretTitle || null,
           display_order: maxOrder + 1
-        });
+        })
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create');
+      }
+
       toast.success("Secret epigram created");
       setNewSecretText("");
       setNewSecretTitle("");
@@ -167,15 +174,23 @@ const Admin = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('secret_epigrams')
-        .update({
+      const response = await fetch(edgeFunctionUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          write_key: getWriteKey(),
+          action: 'update_secret',
+          id: editingSecretId,
           text: editSecretText,
           title: editSecretTitle || null
         })
-        .eq('id', editingSecretId);
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update');
+      }
+
       toast.success("Secret epigram updated");
       setEditingSecretId(null);
       setEditSecretText("");
@@ -196,12 +211,21 @@ const Admin = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('secret_epigrams')
-        .delete()
-        .eq('id', id);
+      const response = await fetch(edgeFunctionUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          write_key: getWriteKey(),
+          action: 'delete_secret',
+          id
+        })
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete');
+      }
+
       toast.success("Secret epigram deleted");
       await loadSecretEpigrams();
     } catch (error) {
@@ -212,6 +236,8 @@ const Admin = () => {
     }
   };
 
+  // ========== AUTH ==========
+
   const handleLogin = async () => {
     if (!writeKey.trim()) {
       toast.error("Please enter a write key");
@@ -220,20 +246,14 @@ const Admin = () => {
 
     setLoading(true);
     try {
-      // Validate the write key by making a test request
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/epigrams`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            write_key: writeKey,
-            epigram: { text: '__test__', thread_id: 'test' }
-          })
-        }
-      );
+      const response = await fetch(edgeFunctionUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          write_key: writeKey,
+          epigram: { text: '__test__', thread_id: 'test' }
+        })
+      });
 
       if (response.status === 401) {
         toast.error("Invalid write key");
@@ -241,7 +261,6 @@ const Admin = () => {
         return;
       }
 
-      // If we got here, the key is valid
       sessionStorage.setItem("ahmed_write_key", writeKey);
       setIsAuthenticated(true);
       await loadEpigrams();
@@ -261,6 +280,8 @@ const Admin = () => {
     setWriteKey("");
     navigate("/");
   };
+
+  // ========== EPIGRAMS ==========
 
   const loadEpigrams = async () => {
     try {
@@ -285,24 +306,19 @@ const Admin = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/epigrams`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            write_key: writeKey,
-            epigram: {
-              text: newText || '',
-              thread_id: newThreadId,
-              title: newTitle || null,
-              image_url: newImageUrl || null
-            }
-          })
-        }
-      );
+      const response = await fetch(edgeFunctionUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          write_key: getWriteKey(),
+          epigram: {
+            text: newText || '',
+            thread_id: newThreadId,
+            title: newTitle || null,
+            image_url: newImageUrl || null
+          }
+        })
+      });
 
       if (!response.ok) {
         const error = await response.json();
@@ -338,24 +354,19 @@ const Admin = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/epigrams`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            write_key: writeKey,
-            epigram: {
-              id: editingId,
-              text: editText,
-              thread_id: editThreadId,
-              title: editTitle || null
-            }
-          })
-        }
-      );
+      const response = await fetch(edgeFunctionUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          write_key: getWriteKey(),
+          epigram: {
+            id: editingId,
+            text: editText,
+            thread_id: editThreadId,
+            title: editTitle || null
+          }
+        })
+      });
 
       if (!response.ok) {
         const error = await response.json();
@@ -383,19 +394,14 @@ const Admin = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/epigrams`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            write_key: writeKey,
-            delete_id: id,
-          }),
-        }
-      );
+      const response = await fetch(edgeFunctionUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          write_key: getWriteKey(),
+          delete_id: id,
+        })
+      });
 
       if (!response.ok) {
         const error = await response.json();
@@ -425,7 +431,6 @@ const Admin = () => {
     const reorderedEpigrams = arrayMove(epigrams, oldIndex, newIndex);
     setEpigrams(reorderedEpigrams);
 
-    // Send batch reorder request
     setLoading(true);
     try {
       const reorderData = reorderedEpigrams.map((epigram, index) => ({
@@ -433,19 +438,14 @@ const Admin = () => {
         display_order: index + 1
       }));
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/epigrams`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            write_key: writeKey,
-            reorder_batch: reorderData
-          })
-        }
-      );
+      const response = await fetch(edgeFunctionUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          write_key: getWriteKey(),
+          reorder_batch: reorderData
+        })
+      });
 
       if (!response.ok) {
         const error = await response.json();
@@ -457,11 +457,13 @@ const Admin = () => {
     } catch (error) {
       console.error('Error updating order:', error);
       toast.error(error instanceof Error ? error.message : "Failed to update order");
-      await loadEpigrams(); // Reload to reset
+      await loadEpigrams();
     } finally {
       setLoading(false);
     }
   };
+
+  // ========== RENDER ==========
 
   if (!isAuthenticated) {
     return (
@@ -495,7 +497,6 @@ const Admin = () => {
   return (
     <div className="min-h-screen bg-background py-8 px-4 md:px-6">
       <div className="max-w-5xl mx-auto">
-        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-6 border-b">
           <div>
             <h1 className="text-3xl font-bold mb-1">Admin Dashboard</h1>
@@ -518,129 +519,47 @@ const Admin = () => {
             Pick colors visually or enter HSL values manually
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-3">
-              <label className="text-sm font-medium block">
-                Header Text Color ("AHMED")
-              </label>
-              <div className="flex gap-3 items-center">
-                <input
-                  type="color"
-                  value={hslToHex(settings.header_text_color)}
-                  onChange={(e) => updateSetting('header_text_color', hexToHSL(e.target.value))}
-                  className="w-20 h-12 rounded border-2 border-border cursor-pointer"
-                />
-                <Input
-                  value={settings.header_text_color}
-                  onChange={(e) => updateSetting('header_text_color', e.target.value)}
-                  placeholder="0 0% 45%"
-                  className="font-mono text-sm flex-1"
-                />
+            {([
+              ['header_text_color', 'Header Text Color ("AHMED")'],
+              ['thread_number_color', 'Thread Number Color'],
+              ['progress_bar_color', 'Progress Bar Color'],
+              ['body_text_color', 'Body Text Color'],
+              ['loading_bar_color', 'Loading Bar Color'],
+            ] as const).map(([key, label]) => (
+              <div key={key} className="space-y-3">
+                <label className="text-sm font-medium block">{label}</label>
+                <div className="flex gap-3 items-center">
+                  <input
+                    type="color"
+                    value={hslToHex(settings[key])}
+                    onChange={(e) => updateSetting(key, hexToHSL(e.target.value))}
+                    className="w-20 h-12 rounded border-2 border-border cursor-pointer"
+                  />
+                  <Input
+                    value={settings[key]}
+                    onChange={(e) => updateSetting(key, e.target.value)}
+                    placeholder="0 0% 45%"
+                    className="font-mono text-sm flex-1"
+                  />
+                </div>
               </div>
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-sm font-medium block">
-                Thread Number Color
-              </label>
-              <div className="flex gap-3 items-center">
-                <input
-                  type="color"
-                  value={hslToHex(settings.thread_number_color)}
-                  onChange={(e) => updateSetting('thread_number_color', hexToHSL(e.target.value))}
-                  className="w-20 h-12 rounded border-2 border-border cursor-pointer"
-                />
-                <Input
-                  value={settings.thread_number_color}
-                  onChange={(e) => updateSetting('thread_number_color', e.target.value)}
-                  placeholder="5 100% 66%"
-                  className="font-mono text-sm flex-1"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-sm font-medium block">
-                Progress Bar Color
-              </label>
-              <div className="flex gap-3 items-center">
-                <input
-                  type="color"
-                  value={hslToHex(settings.progress_bar_color)}
-                  onChange={(e) => updateSetting('progress_bar_color', hexToHSL(e.target.value))}
-                  className="w-20 h-12 rounded border-2 border-border cursor-pointer"
-                />
-                <Input
-                  value={settings.progress_bar_color}
-                  onChange={(e) => updateSetting('progress_bar_color', e.target.value)}
-                  placeholder="5 100% 66%"
-                  className="font-mono text-sm flex-1"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-sm font-medium block">
-                Body Text Color
-              </label>
-              <div className="flex gap-3 items-center">
-                <input
-                  type="color"
-                  value={hslToHex(settings.body_text_color)}
-                  onChange={(e) => updateSetting('body_text_color', hexToHSL(e.target.value))}
-                  className="w-20 h-12 rounded border-2 border-border cursor-pointer"
-                />
-                <Input
-                  value={settings.body_text_color}
-                  onChange={(e) => updateSetting('body_text_color', e.target.value)}
-                  placeholder="0 0% 15%"
-                  className="font-mono text-sm flex-1"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-sm font-medium block">
-                Loading Bar Color
-              </label>
-              <div className="flex gap-3 items-center">
-                <input
-                  type="color"
-                  value={hslToHex(settings.loading_bar_color)}
-                  onChange={(e) => updateSetting('loading_bar_color', hexToHSL(e.target.value))}
-                  className="w-20 h-12 rounded border-2 border-border cursor-pointer"
-                />
-                <Input
-                  value={settings.loading_bar_color}
-                  onChange={(e) => updateSetting('loading_bar_color', e.target.value)}
-                  placeholder="5 100% 66%"
-                  className="font-mono text-sm flex-1"
-                />
-              </div>
-            </div>
+            ))}
           </div>
           <div className="mt-6 p-4 bg-muted/30 rounded-lg">
             <p className="text-xs text-muted-foreground mb-2">Preview:</p>
             <div className="flex gap-4 flex-wrap">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded border-2" style={{ backgroundColor: `hsl(${settings.header_text_color})` }} />
-                <span className="text-xs">Header</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded border-2" style={{ backgroundColor: `hsl(${settings.thread_number_color})` }} />
-                <span className="text-xs">Thread #</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded border-2" style={{ backgroundColor: `hsl(${settings.progress_bar_color})` }} />
-                <span className="text-xs">Progress</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded border-2" style={{ backgroundColor: `hsl(${settings.body_text_color})` }} />
-                <span className="text-xs">Body Text</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded border-2" style={{ backgroundColor: `hsl(${settings.loading_bar_color})` }} />
-                <span className="text-xs">Loading Bar</span>
-              </div>
+              {([
+                ['header_text_color', 'Header'],
+                ['thread_number_color', 'Thread #'],
+                ['progress_bar_color', 'Progress'],
+                ['body_text_color', 'Body Text'],
+                ['loading_bar_color', 'Loading Bar'],
+              ] as const).map(([key, label]) => (
+                <div key={key} className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded border-2" style={{ backgroundColor: `hsl(${settings[key]})` }} />
+                  <span className="text-xs">{label}</span>
+                </div>
+              ))}
             </div>
           </div>
         </Card>
@@ -650,9 +569,7 @@ const Admin = () => {
           <h2 className="text-xl font-semibold mb-4">Create New Epigram</h2>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-2 block text-muted-foreground">
-                Thread ID
-              </label>
+              <label className="text-sm font-medium mb-2 block text-muted-foreground">Thread ID</label>
               <Input
                 placeholder="default"
                 value={newThreadId}
@@ -702,7 +619,6 @@ const Admin = () => {
             Hidden content revealed when users flip their phone upside down for 2 seconds (mobile only)
           </p>
           
-          {/* Create New Secret Epigram */}
           <div className="space-y-4 mb-6 p-4 bg-muted/20 rounded-lg">
             <h3 className="text-sm font-semibold">Create New Secret Epigram</h3>
             <div>
@@ -737,7 +653,6 @@ const Admin = () => {
             </Button>
           </div>
 
-          {/* Preview Toggle */}
           <div className="mb-4">
             <Button 
               variant="outline"
@@ -748,7 +663,6 @@ const Admin = () => {
             </Button>
           </div>
 
-          {/* Preview */}
           {secretPreview && (
             <div 
               className="mb-6 p-6 rounded-lg min-h-[200px]"
@@ -773,7 +687,6 @@ const Admin = () => {
             </div>
           )}
 
-          {/* Existing Secret Epigrams */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold">All Secret Epigrams ({secretEpigrams.length})</h3>
             {secretEpigrams.length === 0 ? (

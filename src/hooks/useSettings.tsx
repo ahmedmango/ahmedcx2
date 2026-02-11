@@ -43,13 +43,31 @@ export const useSettings = () => {
   };
 
   const updateSetting = async (key: keyof Settings, value: string) => {
-    try {
-      const { error } = await supabase
-        .from('settings')
-        .update({ value, updated_at: new Date().toISOString() })
-        .eq('key', key);
+    const writeKey = sessionStorage.getItem("ahmed_write_key");
+    if (!writeKey) {
+      console.error('No write key found');
+      return false;
+    }
 
-      if (error) throw error;
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/epigrams`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            write_key: writeKey,
+            action: 'update_setting',
+            key,
+            value
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update setting');
+      }
 
       setSettings(prev => ({ ...prev, [key]: value }));
       return true;

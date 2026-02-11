@@ -7,7 +7,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -19,55 +18,139 @@ serve(async (req) => {
 
     // GET - Fetch all epigrams (public)
     if (req.method === 'GET') {
-      console.log('Fetching all epigrams');
-      
       const { data, error } = await supabase
         .from('epigrams')
         .select('*')
         .order('created_at', { ascending: true });
 
-      if (error) {
-        console.error('Error fetching epigrams:', error);
-        throw error;
-      }
-
-      console.log(`Successfully fetched ${data?.length || 0} epigrams`);
+      if (error) throw error;
 
       return new Response(
         JSON.stringify(data),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200 
-        }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
 
-    // POST - Save/update epigrams or handle delete (admin only)
+    // POST - All admin operations
     if (req.method === 'POST') {
       const body = await req.json();
-      const { write_key, epigram, delete_id, reorder_batch } = body;
+      const { write_key, action } = body;
 
-      console.log('Epigrams POST request received');
-
-      // Validate write key
+      // Validate write key for ALL write operations
       const validWriteKey = Deno.env.get('WRITE_KEY');
       if (!write_key || write_key !== validWriteKey) {
-        console.error('Invalid write key provided');
         return new Response(
           JSON.stringify({ error: 'Unauthorized - Invalid write key' }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 401 
-          }
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
         );
       }
 
-      // Handle batch reordering to avoid unique constraint violations
+      // Special case: validation-only request from admin login
+      if (body.epigram && body.epigram.text === '__test__' && body.epigram.thread_id === 'test') {
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+
+      // ========== SETTINGS ==========
+      if (action === 'update_setting') {
+        const { key, value } = body;
+        if (!key || value === undefined) {
+          return new Response(
+            JSON.stringify({ error: 'Missing key or value' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+
+        const { error } = await supabase
+          .from('settings')
+          .update({ value, updated_at: new Date().toISOString() })
+          .eq('key', key);
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+
+      // ========== SECRET EPIGRAMS ==========
+      if (action === 'create_secret') {
+        const { text, title, display_order } = body;
+        if (!text) {
+          return new Response(
+            JSON.stringify({ error: 'Missing text' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+
+        const { data, error } = await supabase
+          .from('secret_epigrams')
+          .insert({ text, title: title || null, display_order: display_order || 1 })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify(data),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+
+      if (action === 'update_secret') {
+        const { id, text, title } = body;
+        if (!id || !text) {
+          return new Response(
+            JSON.stringify({ error: 'Missing id or text' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+
+        const { error } = await supabase
+          .from('secret_epigrams')
+          .update({ text, title: title || null })
+          .eq('id', id);
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+
+      if (action === 'delete_secret') {
+        const { id } = body;
+        if (!id) {
+          return new Response(
+            JSON.stringify({ error: 'Missing id' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+
+        const { error } = await supabase
+          .from('secret_epigrams')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+
+      // ========== EPIGRAMS (existing logic) ==========
+
+      const { epigram, delete_id, reorder_batch } = body;
+
+      // Handle batch reordering
       if (reorder_batch && Array.isArray(reorder_batch)) {
-        console.log(`Batch reordering ${reorder_batch.length} epigrams`);
-        
         try {
-          // First, set all display_order to temporary high values to avoid conflicts
           const tempOffset = 10000;
           for (let i = 0; i < reorder_batch.length; i++) {
             const { id } = reorder_batch[i];
@@ -77,7 +160,6 @@ serve(async (req) => {
               .eq('id', id);
           }
           
-          // Then set them to their final values
           for (let i = 0; i < reorder_batch.length; i++) {
             const { id, display_order } = reorder_batch[i];
             const { error } = await supabase
@@ -85,78 +167,43 @@ serve(async (req) => {
               .update({ display_order })
               .eq('id', id);
               
-            if (error) {
-              console.error('Error in batch reorder:', error);
-              throw error;
-            }
+            if (error) throw error;
           }
-          
-          console.log('Successfully reordered epigrams');
           
           return new Response(
             JSON.stringify({ success: true }),
-            { 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              status: 200 
-            }
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
           );
         } catch (error) {
-          console.error('Batch reorder error:', error);
           throw error;
         }
       }
 
-      // Handle delete via POST to avoid browser DELETE issues
+      // Handle delete
       if (typeof delete_id !== 'undefined') {
-        console.log(`Deleting epigram via POST delete_id: ${delete_id}`);
-
         const { error } = await supabase
           .from('epigrams')
           .delete()
           .eq('id', delete_id);
 
-        if (error) {
-          console.error('Error deleting epigram via POST:', error);
-          throw error;
-        }
-
-        console.log('Successfully deleted epigram via POST');
+        if (error) throw error;
 
         return new Response(
           JSON.stringify({ success: true }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200 
-          }
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
 
-      // Special case: validation-only request from admin login
-      if (epigram && epigram.text === '__test__' && epigram.thread_id === 'test') {
-        console.log('Write key validation request - no DB changes');
-        return new Response(
-          JSON.stringify({ success: true }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200,
-          }
-        );
-      }
-
+      // Handle create/update epigram
       if (!epigram || (!epigram.text && !epigram.image_url)) {
         return new Response(
           JSON.stringify({ error: 'Missing epigram text or image' }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400 
-          }
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
         );
       }
 
-      // If epigram has an id, update it; otherwise insert
       let result;
       if (epigram.id) {
-        console.log(`Updating epigram ${epigram.id}`);
         const updateData: any = {
           text: epigram.text || '',
           thread_id: epigram.thread_id || 'default',
@@ -164,7 +211,6 @@ serve(async (req) => {
           image_url: epigram.image_url || null
         };
         
-        // Only update display_order if explicitly provided
         if (epigram.display_order !== undefined) {
           updateData.display_order = epigram.display_order;
         }
@@ -176,9 +222,6 @@ serve(async (req) => {
           .select()
           .single();
       } else {
-        console.log('Creating new epigram');
-        
-        // Get the max display_order to assign the next one
         const { data: maxData } = await supabase
           .from('epigrams')
           .select('display_order')
@@ -200,19 +243,11 @@ serve(async (req) => {
           .single();
       }
 
-      if (result.error) {
-        console.error('Error saving epigram:', result.error);
-        throw result.error;
-      }
-
-      console.log('Successfully saved epigram');
+      if (result.error) throw result.error;
 
       return new Response(
         JSON.stringify(result.data),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200 
-        }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
 
@@ -222,28 +257,18 @@ serve(async (req) => {
       const id = url.searchParams.get('id');
       const write_key = url.searchParams.get('write_key');
 
-      console.log(`Delete epigram request for id: ${id}`);
-
-      // Validate write key
       const validWriteKey = Deno.env.get('WRITE_KEY');
       if (!write_key || write_key !== validWriteKey) {
-        console.error('Invalid write key provided');
         return new Response(
           JSON.stringify({ error: 'Unauthorized - Invalid write key' }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 401 
-          }
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
         );
       }
 
       if (!id) {
         return new Response(
           JSON.stringify({ error: 'Missing epigram id' }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400 
-          }
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
         );
       }
 
@@ -252,39 +277,24 @@ serve(async (req) => {
         .delete()
         .eq('id', id);
 
-      if (error) {
-        console.error('Error deleting epigram:', error);
-        throw error;
-      }
-
-      console.log('Successfully deleted epigram');
+      if (error) throw error;
 
       return new Response(
         JSON.stringify({ success: true }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200 
-        }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
 
     return new Response(
       JSON.stringify({ error: 'Method not allowed' }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 405 
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 405 }
     );
 
   } catch (error) {
-    console.error('Unexpected error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: errorMessage }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
 });
