@@ -5,9 +5,18 @@ import { Button } from "@/components/ui/button";
 interface HeaderProps {
   currentThread?: string;
   onTextSizeChange?: (delta: number) => void;
+  showSecretButton?: boolean;
+  onSecretTap?: () => void;
+  onSecretActivate?: () => void;
 }
 
-const Header = ({ currentThread = "#0000", onTextSizeChange }: HeaderProps) => {
+const Header = ({ 
+  currentThread = "#0000", 
+  onTextSizeChange,
+  showSecretButton = false,
+  onSecretTap,
+  onSecretActivate,
+}: HeaderProps) => {
   const progressBarRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -46,7 +55,11 @@ const Header = ({ currentThread = "#0000", onTextSizeChange }: HeaderProps) => {
       <div className="px-6 py-8">
         <div className="max-w-3xl mx-auto flex justify-between items-start">
           <div className="space-y-1">
-            <h1 className="text-sm tracking-[0.2em] uppercase" style={{ color: 'var(--header-text)' }}>
+            <h1 
+              className="text-sm tracking-[0.2em] uppercase select-none"
+              style={{ color: 'var(--header-text)', cursor: 'default' }}
+              onClick={onSecretTap}
+            >
               AHMED
             </h1>
             <div className="text-lg font-normal tracking-tight" style={{ color: 'var(--thread-number)' }}>
@@ -73,6 +86,23 @@ const Header = ({ currentThread = "#0000", onTextSizeChange }: HeaderProps) => {
                 aria-label="Increase text size"
               >
                 <Plus className="h-4 w-4" style={{ color: 'var(--header-text)' }} />
+              </Button>
+
+              {/* Secret ? button — fades in after 5 taps on AHMED */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 transition-all duration-700"
+                style={{ 
+                  color: 'var(--header-text)',
+                  opacity: showSecretButton ? 0.6 : 0,
+                  pointerEvents: showSecretButton ? 'auto' : 'none',
+                  transform: showSecretButton ? 'scale(1)' : 'scale(0.5)',
+                }}
+                onClick={onSecretActivate}
+                aria-label="Secret"
+              >
+                <span className="text-sm font-serif">?</span>
               </Button>
             </div>
           )}
