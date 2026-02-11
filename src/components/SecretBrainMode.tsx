@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface SecretEpigram {
   id: number;
@@ -13,29 +13,93 @@ interface SecretBrainModeProps {
   children: React.ReactNode;
 }
 
-const SecretBrainMode = ({ isActivated, secretEpigrams, children }: SecretBrainModeProps) => {
-  const [phase, setPhase] = useState<'normal' | 'falling' | 'revealed'>('normal');
+// Simple HTML sanitizer - strips script tags and event handlers
+const sanitizeHTML = (html: string): string => {
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  
+  // Remove script tags
+  const scripts = div.querySelectorAll('script');
+  scripts.forEach(s => s.remove());
+  
+  // Remove event handlers from all elements
+  const allElements = div.querySelectorAll('*');
+  allElements.forEach(el => {
+    const attrs = Array.from(el.attributes);
+    attrs.forEach(attr => {
+      if (attr.name.startsWith('on') || attr.value.includes('javascript:')) {
+        el.removeAttribute(attr.name);
+      }
+    });
+    // Remove dangerous tags
+    if (['iframe', 'object', 'embed', 'form', 'meta', 'link', 'style'].includes(el.tagName.toLowerCase())) {
+      el.remove();
+    }
+  });
+  
+  return div.innerHTML;
+};
 
+const SecretBrainMode = ({ isActivated, secretEpigrams, children }: SecretBrainModeProps) => {
+  const [phase, setPhase] = useState<'normal' | 'falling' | 'revealed' | 'rising' | 'restoring'>('normal');
+  const [wasActivated, setWasActivated] = useState(false);
+  const scrollPosRef = useRef(0);
+
+  // Handle activation
   useEffect(() => {
     if (isActivated && phase === 'normal') {
-      // Start falling animation
-      setPhase('falling');
+      // Save scroll position and lock scroll
+      scrollPosRef.current = window.scrollY;
+      document.body.style.overflow = 'hidden';
       
-      // After fall completes, reveal dark thread
+      setPhase('falling');
+      setWasActivated(true);
+      
       const revealTimer = setTimeout(() => {
         setPhase('revealed');
+        // Re-enable scroll for secret content
+        document.body.style.overflow = '';
       }, 1800);
       
       return () => clearTimeout(revealTimer);
     }
   }, [isActivated, phase]);
 
+  // Handle deactivation (flip back)
+  useEffect(() => {
+    if (!isActivated && wasActivated && phase === 'revealed') {
+      // Lock scroll during reverse transition
+      document.body.style.overflow = 'hidden';
+      
+      setPhase('rising');
+      
+      const restoreTimer = setTimeout(() => {
+        setPhase('normal');
+        setWasActivated(false);
+        // Restore scroll
+        document.body.style.overflow = '';
+        window.scrollTo(0, scrollPosRef.current);
+      }, 1800);
+      
+      return () => clearTimeout(restoreTimer);
+    }
+  }, [isActivated, wasActivated, phase]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   return (
     <>
       {/* Dark thread layer (underneath) */}
       <section 
         className={`fixed inset-0 z-40 overflow-y-auto transition-all duration-1000 ease-out ${
-          phase === 'revealed' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+          phase === 'revealed' ? 'opacity-100 translate-y-0' : 
+          phase === 'rising' ? 'opacity-0 translate-y-10' :
+          'opacity-0 translate-y-10 pointer-events-none'
         }`}
         style={{
           background: '#000000',
@@ -93,7 +157,7 @@ const SecretBrainMode = ({ isActivated, secretEpigrams, children }: SecretBrainM
                   )}
                   <div 
                     className="text-lg whitespace-pre-wrap"
-                    dangerouslySetInnerHTML={{ __html: epigram.text }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHTML(epigram.text) }}
                   />
                 </article>
               ))
@@ -102,10 +166,11 @@ const SecretBrainMode = ({ isActivated, secretEpigrams, children }: SecretBrainM
         </div>
       </section>
 
-      {/* Public content (falls away) */}
+      {/* Public content (falls away / rises back) */}
       <div 
         className={`relative z-50 transition-all ease-in ${
-          phase === 'falling' || phase === 'revealed' ? 'fall-away' : ''
+          phase === 'falling' || phase === 'revealed' ? 'fall-away' : 
+          phase === 'rising' ? 'rise-back' : ''
         }`}
         style={{
           transitionDuration: '1.8s',
@@ -120,6 +185,11 @@ const SecretBrainMode = ({ isActivated, secretEpigrams, children }: SecretBrainM
         .fall-away {
           transform: translateY(120vh) rotateX(25deg);
           opacity: 0;
+        }
+
+        .rise-back {
+          transform: translateY(0) rotateX(0deg);
+          opacity: 1;
         }
 
         @keyframes parallaxDrift {

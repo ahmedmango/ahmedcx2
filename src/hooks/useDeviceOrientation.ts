@@ -15,122 +15,111 @@ export function useDeviceOrientation(thresholdMs = 2000): DeviceOrientationState
   const [hasPermission, setHasPermission] = useState(false);
   
   const flipStartRef = useRef<number | null>(null);
-  const activatedRef = useRef(false);
+  const uprightStartRef = useRef<number | null>(null);
   const listenerAddedRef = useRef(false);
 
-  // Check for reduced motion preference
   const prefersReducedMotion = typeof window !== 'undefined' 
     ? window.matchMedia('(prefers-reduced-motion: reduce)').matches 
     : false;
 
   const handleOrientation = useCallback((event: DeviceOrientationEvent) => {
-    // Already activated - don't retrigger
-    if (activatedRef.current) return;
-
     const beta = event.beta ?? 0;
     
-    // Upside down: beta < -150 or beta > 150
-    // Also check for near 180 degrees (some devices report differently)
+    // Upside down: |beta| > 140
     const isUpsideDown = Math.abs(beta) > 140;
+    // Upright: |beta| < 40
+    const isUpright = Math.abs(beta) < 40;
     
     if (isUpsideDown) {
+      // Reset upright timer
+      uprightStartRef.current = null;
+      
       if (!flipStartRef.current) {
         flipStartRef.current = Date.now();
-        console.log('Flip started, holding position...');
       }
       
-      // Check if sustained for threshold duration
-      if (Date.now() - flipStartRef.current >= thresholdMs) {
-        console.log('Flip sustained - activating secret mode!');
-        activatedRef.current = true;
+      // Activate after sustained flip
+      if (!isActivated && Date.now() - flipStartRef.current >= thresholdMs) {
         setIsActivated(true);
-        // Remove listener - one-time activation
-        window.removeEventListener('deviceorientation', handleOrientation);
+      }
+    } else if (isUpright) {
+      // Reset flip timer
+      flipStartRef.current = null;
+      
+      if (isActivated) {
+        if (!uprightStartRef.current) {
+          uprightStartRef.current = Date.now();
+        }
+        
+        // Deactivate after sustained upright (shorter threshold for exit)
+        if (Date.now() - uprightStartRef.current >= 1000) {
+          setIsActivated(false);
+          uprightStartRef.current = null;
+        }
       }
     } else {
-      // Reset timer if not upside down
-      if (flipStartRef.current) {
-        console.log('Flip reset - device returned to normal');
-      }
+      // In-between position — reset both timers
       flipStartRef.current = null;
+      uprightStartRef.current = null;
     }
-  }, [thresholdMs]);
+  }, [isActivated, thresholdMs]);
 
   const addOrientationListener = useCallback(() => {
-    if (listenerAddedRef.current || activatedRef.current) return;
-    console.log('Adding device orientation listener');
+    if (listenerAddedRef.current) return;
     listenerAddedRef.current = true;
     window.addEventListener('deviceorientation', handleOrientation);
   }, [handleOrientation]);
 
-  const requestPermission = useCallback(async () => {
-    console.log('Requesting device orientation permission...');
+  // Re-attach listener when handleOrientation changes (due to isActivated dep)
+  useEffect(() => {
+    if (!hasPermission || !isMobile || prefersReducedMotion) return;
     
-    // Check if this is iOS 13+ which requires permission
+    // Remove old listener and add new one with updated closure
+    window.removeEventListener('deviceorientation', handleOrientation);
+    window.addEventListener('deviceorientation', handleOrientation);
+    listenerAddedRef.current = true;
+
+    return () => {
+      window.removeEventListener('deviceorientation', handleOrientation);
+      listenerAddedRef.current = false;
+    };
+  }, [handleOrientation, hasPermission, isMobile, prefersReducedMotion]);
+
+  const requestPermission = useCallback(async () => {
     if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
       try {
         const permission = await (DeviceOrientationEvent as any).requestPermission();
-        console.log('Permission result:', permission);
         if (permission === 'granted') {
           setHasPermission(true);
-          addOrientationListener();
-        } else {
-          console.log('Device orientation permission denied');
         }
       } catch (error) {
         console.error('Error requesting device orientation permission:', error);
       }
     } else {
-      // Non-iOS or older iOS - permission not required
-      console.log('Permission not required, adding listener directly');
       setHasPermission(true);
-      addOrientationListener();
     }
-  }, [addOrientationListener]);
+  }, []);
 
   useEffect(() => {
-    if (!isMobile || prefersReducedMotion) {
-      console.log('Device orientation disabled:', { isMobile, prefersReducedMotion });
-      return;
-    }
+    if (!isMobile || prefersReducedMotion) return;
 
     if ('DeviceOrientationEvent' in window) {
       setIsSupported(true);
-      console.log('DeviceOrientationEvent is supported');
       
-      // Check if permission API exists (iOS 13+)
       if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
-        console.log('iOS permission API detected - waiting for user interaction');
-        // iOS requires user gesture to request permission
-        // We'll handle this via the requestPermission function
+        // iOS — wait for user gesture
       } else {
-        // Not iOS or older iOS - just add the listener
-        console.log('No permission API - adding listener directly');
         setHasPermission(true);
-        addOrientationListener();
       }
-    } else {
-      console.log('DeviceOrientationEvent not supported');
     }
+  }, [isMobile, prefersReducedMotion]);
 
-    return () => {
-      window.removeEventListener('deviceorientation', handleOrientation);
-    };
-  }, [isMobile, prefersReducedMotion, handleOrientation, addOrientationListener]);
-
-  // iOS: Request permission on first touch if not yet granted
+  // iOS: Request permission on first touch
   useEffect(() => {
-    if (!isMobile || prefersReducedMotion || !isSupported || hasPermission) {
-      return;
-    }
-
-    // Only set up touch handler if we need permission (iOS 13+)
-    if (typeof (DeviceOrientationEvent as any).requestPermission !== 'function') {
-      return;
-    }
+    if (!isMobile || prefersReducedMotion || !isSupported || hasPermission) return;
+    if (typeof (DeviceOrientationEvent as any).requestPermission !== 'function') return;
 
     const handleFirstTouch = () => {
-      console.log('First touch detected - requesting permission');
       requestPermission();
     };
 
