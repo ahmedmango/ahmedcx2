@@ -2,8 +2,8 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import Header from "@/components/Header";
 import EpigramBlock from "@/components/EpigramBlock";
 import LoadingBar from "@/components/LoadingBar";
-import SecretBrainMode from "@/components/SecretBrainMode";
 import KeyholeOverlay from "@/components/KeyholeOverlay";
+import ThresholdGate from "@/components/ThresholdGate";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,7 +41,10 @@ const Index = () => {
   const [tapCount, setTapCount] = useState(0);
   const [showSecretButton, setShowSecretButton] = useState(false);
   const [keyholeOpen, setKeyholeOpen] = useState(false);
+  const [gateOpen, setGateOpen] = useState(false);
   const [secretUnlocked, setSecretUnlocked] = useState(false);
+  const [requireScrollReset, setRequireScrollReset] = useState(false);
+  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const tapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Swipe-to-dismiss tracking
@@ -57,14 +60,35 @@ const Index = () => {
     });
   };
 
+  // Track scroll to bottom (for reset requirement)
+  useEffect(() => {
+    if (!requireScrollReset) return;
+
+    const handleScroll = () => {
+      const doc = document.documentElement;
+      const scrollTop = doc.scrollTop || document.body.scrollTop;
+      const scrollHeight = doc.scrollHeight - doc.clientHeight;
+      const progress = scrollHeight > 0 ? scrollTop / scrollHeight : 0;
+      
+      if (progress > 0.95) {
+        setHasScrolledToBottom(true);
+        setRequireScrollReset(false);
+        setShowSecretButton(true);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [requireScrollReset]);
+
   // Tap counter for AHMED header
   const handleSecretTap = useCallback(() => {
-    if (showSecretButton) return; // Already revealed
+    if (showSecretButton) return;
+    if (requireScrollReset) return;
     
     setTapCount(prev => {
       const next = prev + 1;
       
-      // Reset after 3 seconds of no taps
       if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
       tapTimeoutRef.current = setTimeout(() => setTapCount(0), 3000);
       
@@ -75,27 +99,35 @@ const Index = () => {
       
       return next;
     });
-  }, [showSecretButton]);
+  }, [showSecretButton, requireScrollReset]);
 
-  // Open the keyhole overlay
   const handleSecretActivate = useCallback(() => {
     setKeyholeOpen(true);
   }, []);
 
-  // Keyhole rotation completed — unlock secret thread
-  const handleUnlock = useCallback(() => {
+  const handleKeyholeUnlock = useCallback(() => {
     setKeyholeOpen(false);
-    setSecretUnlocked(true);
-    // Scroll to top of secret content
-    window.scrollTo(0, 0);
+    setGateOpen(true);
   }, []);
 
-  // Close keyhole without unlocking
   const handleKeyholeClose = useCallback(() => {
     setKeyholeOpen(false);
   }, []);
 
-  // Swipe down to dismiss secret mode
+  const handleGatePass = useCallback(() => {
+    setGateOpen(false);
+    setSecretUnlocked(true);
+    window.scrollTo(0, 0);
+  }, []);
+
+  const handleGateFail = useCallback(() => {
+    setGateOpen(false);
+    setShowSecretButton(false);
+    setTapCount(0);
+    setRequireScrollReset(true);
+    setHasScrolledToBottom(false);
+  }, []);
+
   const handleSecretTouchStart = useCallback((e: React.TouchEvent) => {
     if (!secretUnlocked) return;
     touchStartY.current = e.touches[0].clientY;
@@ -105,15 +137,13 @@ const Index = () => {
     if (!secretUnlocked || touchStartY.current === null) return;
     const deltaY = e.touches[0].clientY - touchStartY.current;
     if (deltaY > 0) {
-      const progress = Math.min(deltaY / 250, 1);
-      setDismissProgress(progress);
+      setDismissProgress(Math.min(deltaY / 250, 1));
     }
   }, [secretUnlocked]);
 
   const handleSecretTouchEnd = useCallback(() => {
     if (!secretUnlocked) return;
     if (dismissProgress > 0.4) {
-      // Dismiss
       setIsDismissing(true);
       setTimeout(() => {
         setSecretUnlocked(false);
@@ -127,6 +157,17 @@ const Index = () => {
     }
     touchStartY.current = null;
   }, [secretUnlocked, dismissProgress]);
+
+  const handleDesktopClose = useCallback(() => {
+    setIsDismissing(true);
+    setTimeout(() => {
+      setSecretUnlocked(false);
+      setIsDismissing(false);
+      setDismissProgress(0);
+      setShowSecretButton(false);
+      setTapCount(0);
+    }, 500);
+  }, []);
 
   useEffect(() => {
     loadEpigrams();
@@ -217,14 +258,18 @@ const Index = () => {
 
   return (
     <>
-      {/* Keyhole overlay — the quote rotation screen */}
       <KeyholeOverlay
         isOpen={keyholeOpen}
-        onUnlock={handleUnlock}
+        onUnlock={handleKeyholeUnlock}
         onClose={handleKeyholeClose}
       />
 
-      {/* Secret epigrams — shown after keyhole unlocks */}
+      <ThresholdGate
+        isOpen={gateOpen}
+        onPass={handleGatePass}
+        onFail={handleGateFail}
+      />
+
       {secretUnlocked && (
         <div
           className="fixed inset-0 z-[90] overflow-y-auto"
@@ -240,50 +285,30 @@ const Index = () => {
           onTouchMove={handleSecretTouchMove}
           onTouchEnd={handleSecretTouchEnd}
         >
-          {/* Noise overlay */}
           <div 
             className="fixed inset-0 pointer-events-none opacity-[0.03] z-[91]"
             style={{
               backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
             }}
           />
-          
-          {/* Vignette */}
           <div 
             className="fixed inset-0 pointer-events-none z-[91]"
             style={{
               background: 'radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.4) 100%)',
             }}
           />
-
-          {/* Swipe indicator */}
           <div className="fixed top-6 left-0 right-0 z-[95] flex justify-center pointer-events-none">
             <div 
               className="w-10 h-1 rounded-full bg-orange-500/30"
-              style={{
-                animation: 'breathe 3s ease-in-out infinite',
-              }}
+              style={{ animation: 'breathe 3s ease-in-out infinite' }}
             />
           </div>
-
-          {/* Desktop close button */}
           <button
-            onClick={() => {
-              setIsDismissing(true);
-              setTimeout(() => {
-                setSecretUnlocked(false);
-                setIsDismissing(false);
-                setDismissProgress(0);
-                setShowSecretButton(false);
-                setTapCount(0);
-              }, 500);
-            }}
+            onClick={handleDesktopClose}
             className="fixed top-8 right-8 z-[95] text-orange-500/20 hover:text-orange-500/50 transition-colors text-xs tracking-[0.3em] uppercase"
           >
             CLOSE
           </button>
-          
-          {/* Content */}
           <div className="relative z-[92] min-h-screen px-5 py-24">
             <div 
               className="max-w-[680px] mx-auto w-full space-y-24"
@@ -314,7 +339,6 @@ const Index = () => {
               )}
             </div>
           </div>
-
           <style>{`
             @keyframes breathe {
               0%, 100% { opacity: 0.3; }
@@ -324,7 +348,6 @@ const Index = () => {
         </div>
       )}
 
-      {/* Main public content */}
       <div
         style={{
           opacity: secretUnlocked ? 0 : 1,
