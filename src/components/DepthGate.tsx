@@ -14,7 +14,6 @@ const DOUBLE_TAP_THRESHOLD = 400; // ms
 const DepthGate = ({ onUnlock }: DepthGateProps) => {
   const [corners, setCorners] = useState<Record<string, CornerState>>({
     topLeft: { rotation: 0, lastTap: 0 },
-    topRight: { rotation: 0, lastTap: 0 },
     bottomLeft: { rotation: 0, lastTap: 0 },
     bottomRight: { rotation: 0, lastTap: 0 },
   });
@@ -60,7 +59,6 @@ const DepthGate = ({ onUnlock }: DepthGateProps) => {
 
   const cornerPositions: Record<string, { top?: string; bottom?: string; left?: string; right?: string }> = {
     topLeft: { top: '24px', left: '24px' },
-    topRight: { top: '24px', right: '24px' },
     bottomLeft: { bottom: '24px', left: '24px' },
     bottomRight: { bottom: '24px', right: '24px' },
   };
