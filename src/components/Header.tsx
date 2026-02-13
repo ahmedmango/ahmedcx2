@@ -94,8 +94,8 @@ const Header = ({
                 size="icon"
                 className="h-8 w-8 transition-all duration-700"
                 style={{ 
-                  color: 'var(--header-text)',
-                  opacity: showSecretButton ? 0.6 : 0,
+                  color: 'var(--thread-number)',
+                  opacity: showSecretButton ? 0.8 : 0,
                   pointerEvents: showSecretButton ? 'auto' : 'none',
                   transform: showSecretButton ? 'scale(1)' : 'scale(0.5)',
                 }}

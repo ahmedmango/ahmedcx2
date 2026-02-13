@@ -1,5 +1,31 @@
 import { useState, useEffect, useRef } from 'react';
 
+// Typewriter effect component
+const TypewriterText = ({ text, style }: { text: string; style: React.CSSProperties }) => {
+  const [displayed, setDisplayed] = useState('');
+  
+  useEffect(() => {
+    setDisplayed('');
+    let i = 0;
+    const interval = setInterval(() => {
+      if (i < text.length) {
+        setDisplayed(text.slice(0, i + 1));
+        i++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 80);
+    return () => clearInterval(interval);
+  }, [text]);
+
+  return (
+    <span style={style}>
+      {displayed}
+      <span style={{ opacity: displayed.length < text.length ? 1 : 0, transition: 'opacity 0.3s' }}>|</span>
+    </span>
+  );
+};
+
 interface ThresholdGateProps {
   isOpen: boolean;
   onPass: () => void;
@@ -153,10 +179,10 @@ Respond with ONLY "PASS" or "FAIL" — nothing else.`
 
       if (result === 'PASS') {
         setPhase('passing');
-        setTimeout(() => onPass(), 1500);
+        setTimeout(() => onPass(), 2500);
       } else {
         setPhase('failing');
-        setTimeout(() => onFail(), 2000);
+        setTimeout(() => onFail(), 2500);
       }
     } catch (error) {
       console.error('Evaluation error:', error);
@@ -166,10 +192,10 @@ Respond with ONLY "PASS" or "FAIL" — nothing else.`
       
       if (passed) {
         setPhase('passing');
-        setTimeout(() => onPass(), 1500);
+        setTimeout(() => onPass(), 2500);
       } else {
         setPhase('failing');
-        setTimeout(() => onFail(), 2000);
+        setTimeout(() => onFail(), 2500);
       }
     }
   };
@@ -286,41 +312,34 @@ Respond with ONLY "PASS" or "FAIL" — nothing else.`
         </div>
       )}
 
-      {/* Pass state */}
+      {/* Pass state — typewriter "Congratulations" */}
       {phase === 'passing' && (
-        <div 
-          className="text-center"
-          style={{
-            animation: 'fadeInUp 1s ease forwards',
-          }}
-        >
-          <div
-            className="font-serif"
+        <div className="text-center">
+          <TypewriterText 
+            text="Congratulations" 
             style={{
               fontSize: 'clamp(1.5rem, 5vw, 2.5rem)',
               color: '#FF7A00',
               textShadow: '0 0 40px rgba(255, 122, 0, 0.5)',
               letterSpacing: '0.1em',
+              fontFamily: '"Courier New", Courier, monospace',
             }}
-          >
-            ◯
-          </div>
+          />
         </div>
       )}
 
-      {/* Fail state */}
+      {/* Fail state — typewriter "Goodbye" */}
       {phase === 'failing' && (
-        <div 
-          className="text-center"
-          style={{
-            animation: 'fadeInUp 0.8s ease forwards',
-          }}
-        >
-          <p
-            className="font-serif text-orange-500/20 text-sm tracking-widest"
-          >
-            seek further
-          </p>
+        <div className="text-center">
+          <TypewriterText 
+            text="Goodbye" 
+            style={{
+              fontSize: 'clamp(1.3rem, 4vw, 2rem)',
+              color: 'rgba(255, 122, 0, 0.2)',
+              letterSpacing: '0.15em',
+              fontFamily: '"Courier New", Courier, monospace',
+            }}
+          />
         </div>
       )}
 

@@ -7,6 +7,9 @@ interface Settings {
   progress_bar_color: string;
   body_text_color: string;
   loading_bar_color: string;
+  keyhole_quote: string;
+  depth_page_content: string;
+  [key: string]: string;
 }
 
 export const useSettings = () => {
@@ -15,7 +18,9 @@ export const useSettings = () => {
     thread_number_color: '5 100% 66%',
     progress_bar_color: '5 100% 66%',
     body_text_color: '0 0% 15%',
-    loading_bar_color: '5 100% 66%'
+    loading_bar_color: '5 100% 66%',
+    keyhole_quote: 'the most entertaining satisfying outcome is most likely',
+    depth_page_content: '',
   });
   const [loading, setLoading] = useState(true);
 
@@ -29,11 +34,11 @@ export const useSettings = () => {
 
       if (data) {
         const settingsObj = data.reduce((acc, curr) => {
-          acc[curr.key as keyof Settings] = curr.value;
+          acc[curr.key] = curr.value;
           return acc;
-        }, {} as Settings);
+        }, {} as Record<string, string>);
         
-        setSettings(settingsObj);
+        setSettings(prev => ({ ...prev, ...settingsObj }));
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -42,7 +47,7 @@ export const useSettings = () => {
     }
   };
 
-  const updateSetting = async (key: keyof Settings, value: string) => {
+  const updateSetting = async (key: string, value: string) => {
     const writeKey = sessionStorage.getItem("ahmed_write_key");
     if (!writeKey) {
       console.error('No write key found');

@@ -2,11 +2,12 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 
 interface KeyholeOverlayProps {
   isOpen: boolean;
+  quoteText: string;
   onUnlock: () => void;
   onClose: () => void;
 }
 
-const KeyholeOverlay = ({ isOpen, onUnlock, onClose }: KeyholeOverlayProps) => {
+const KeyholeOverlay = ({ isOpen, quoteText, onUnlock, onClose }: KeyholeOverlayProps) => {
   const [rotation, setRotation] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [hasUnlocked, setHasUnlocked] = useState(false);
@@ -15,7 +16,6 @@ const KeyholeOverlay = ({ isOpen, onUnlock, onClose }: KeyholeOverlayProps) => {
   const dragStartAngle = useRef(0);
   const rotationAtDragStart = useRef(0);
 
-  // Reset state when overlay opens
   useEffect(() => {
     if (isOpen) {
       setRotation(0);
@@ -43,32 +43,19 @@ const KeyholeOverlay = ({ isOpen, onUnlock, onClose }: KeyholeOverlayProps) => {
     if (!isDragging || hasUnlocked) return;
     const currentAngle = getAngleFromCenter(clientX, clientY);
     let delta = currentAngle - dragStartAngle.current;
-    
-    // Normalize delta to avoid jumps
     if (delta > 180) delta -= 360;
     if (delta < -180) delta += 360;
-    
     let newRotation = rotationAtDragStart.current + delta;
-    // Clamp between 0 and 185 (slight overshoot allowed)
     newRotation = Math.max(0, Math.min(185, newRotation));
     setRotation(newRotation);
 
-    // Unlock at 180
     if (newRotation >= 175 && !hasUnlocked) {
       setHasUnlocked(true);
       setIsDragging(false);
-      
-      // Haptic feedback if available
-      if (navigator.vibrate) {
-        navigator.vibrate(50);
-      }
-      
-      // Brief pause then transition
+      if (navigator.vibrate) navigator.vibrate(50);
       setTimeout(() => {
         setFadeOut(true);
-        setTimeout(() => {
-          onUnlock();
-        }, 800);
+        setTimeout(() => onUnlock(), 800);
       }, 400);
     }
   }, [isDragging, getAngleFromCenter, hasUnlocked, onUnlock]);
@@ -76,35 +63,19 @@ const KeyholeOverlay = ({ isOpen, onUnlock, onClose }: KeyholeOverlayProps) => {
   const handleDragEnd = useCallback(() => {
     if (!isDragging) return;
     setIsDragging(false);
-    
-    // Snap back if not unlocked
-    if (!hasUnlocked && rotation < 175) {
-      setRotation(0);
-    }
+    if (!hasUnlocked && rotation < 175) setRotation(0);
   }, [isDragging, hasUnlocked, rotation]);
 
-  // Mouse events
   const onMouseDown = (e: React.MouseEvent) => handleDragStart(e.clientX, e.clientY);
   const onMouseMove = (e: React.MouseEvent) => handleDragMove(e.clientX, e.clientY);
   const onMouseUp = () => handleDragEnd();
-
-  // Touch events
-  const onTouchStart = (e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    handleDragStart(touch.clientX, touch.clientY);
-  };
-  const onTouchMove = (e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    handleDragMove(touch.clientX, touch.clientY);
-  };
+  const onTouchStart = (e: React.TouchEvent) => handleDragStart(e.touches[0].clientX, e.touches[0].clientY);
+  const onTouchMove = (e: React.TouchEvent) => handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
   const onTouchEnd = () => handleDragEnd();
 
-  // Close on Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen && !hasUnlocked) {
-        onClose();
-      }
+      if (e.key === 'Escape' && isOpen && !hasUnlocked) onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -112,12 +83,9 @@ const KeyholeOverlay = ({ isOpen, onUnlock, onClose }: KeyholeOverlayProps) => {
 
   if (!isOpen) return null;
 
-  // How "unlocked" the rotation feels (0 to 1)
   const progress = Math.min(rotation / 180, 1);
-  // Glow intensifies as you approach 180
   const glowIntensity = progress * 0.6;
-  // Text color shifts from white to orange as you rotate
-  const textR = Math.round(255);
+  const textR = 255;
   const textG = Math.round(255 - (255 - 122) * progress);
   const textB = Math.round(255 - 255 * progress);
 
@@ -125,9 +93,7 @@ const KeyholeOverlay = ({ isOpen, onUnlock, onClose }: KeyholeOverlayProps) => {
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center"
       style={{
-        background: hasUnlocked && fadeOut
-          ? '#000000'
-          : `rgba(0, 0, 0, ${0.92 + glowIntensity * 0.08})`,
+        background: hasUnlocked && fadeOut ? '#000000' : `rgba(0, 0, 0, ${0.92 + glowIntensity * 0.08})`,
         transition: fadeOut ? 'background 0.8s ease' : 'background 0.1s ease',
         cursor: isDragging ? 'grabbing' : 'default',
       }}
@@ -137,7 +103,6 @@ const KeyholeOverlay = ({ isOpen, onUnlock, onClose }: KeyholeOverlayProps) => {
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      {/* Close hint */}
       {!hasUnlocked && (
         <button
           onClick={onClose}
@@ -147,7 +112,6 @@ const KeyholeOverlay = ({ isOpen, onUnlock, onClose }: KeyholeOverlayProps) => {
         </button>
       )}
 
-      {/* Rotating quote */}
       <div
         ref={containerRef}
         className="select-none"
@@ -174,11 +138,10 @@ const KeyholeOverlay = ({ isOpen, onUnlock, onClose }: KeyholeOverlayProps) => {
             transition: 'text-shadow 0.3s ease',
           }}
         >
-          the most entertaining satisfying outcome is most likely
+          {quoteText}
         </p>
       </div>
 
-      {/* Rotation indicator — subtle arc */}
       {!hasUnlocked && (
         <svg
           className="absolute pointer-events-none"
@@ -201,25 +164,6 @@ const KeyholeOverlay = ({ isOpen, onUnlock, onClose }: KeyholeOverlayProps) => {
           />
         </svg>
       )}
-
-      {/* Drag hint */}
-      {!hasUnlocked && rotation === 0 && !isDragging && (
-        <p
-          className="absolute bottom-16 text-white/15 text-xs tracking-[0.3em] uppercase"
-          style={{
-            animation: 'breathe 3s ease-in-out infinite',
-          }}
-        >
-          drag to turn
-        </p>
-      )}
-
-      <style>{`
-        @keyframes breathe {
-          0%, 100% { opacity: 0.15; }
-          50% { opacity: 0.3; }
-        }
-      `}</style>
     </div>
   );
 };
