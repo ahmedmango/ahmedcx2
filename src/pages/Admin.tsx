@@ -12,6 +12,7 @@ import { DndContext, DragEndEvent, closestCenter } from "@dnd-kit/core";
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { SortableEpigramCard } from "@/components/SortableEpigramCard";
 import ImageComposer from "@/components/ImageComposer";
+import ThresholdQuestionsEditor from "@/components/ThresholdQuestionsEditor";
 
 interface Epigram {
   id?: number;
@@ -747,7 +748,7 @@ const Admin = () => {
             )}
           </div>
         </Card>
-
+<ThresholdQuestionsEditor writeKey={writeKey} />
         {/* Existing Epigrams */}
         <div className="space-y-4">
           <h2 className="text-xl font-semibold mb-4">All Epigrams (Drag to Reorder)</h2>
